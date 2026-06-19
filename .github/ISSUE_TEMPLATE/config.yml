@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security report
+    url: https://github.com/ashitaka-emishi/the-establishment/security
+    about: Review the security policy before reporting a vulnerability.
