@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Establishment - Web Game</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Public+Sans:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css?v=setup-wizard-2" />
+</head>
+<body>
+  <div class="ambient"></div>
+  <header>
+    <h1>The Establishment</h1>
+    <p>Web referee for local multiplayer (4 rounds)</p>
+  </header>
+
+  <main id="app">
+    <section class="panel" id="setupPanel">
+      <h2>Setup</h2>
+      <div class="row" id="setupIntro">
+        <label for="playerCount">Players</label>
+        <input id="playerCount" type="number" min="2" max="6" value="3" />
+        <button id="buildPlayersBtn">Begin Setup</button>
+      </div>
+      <div id="playersContainer"></div>
+      <div class="row">
+        <button id="startGameBtn" class="hidden" disabled>Start Game</button>
+      </div>
+      <p class="hint">Setup follows the player area order from the rulebook.</p>
+    </section>
+
+    <section class="panel hidden" id="gamePanel">
+      <div class="statusbar">
+        <div>Round: <strong id="roundLabel">1</strong>/4</div>
+        <div>Phase: <strong id="phaseLabel">Opening Discussion</strong></div>
+      </div>
+
+      <div class="actions">
+        <button id="toSupportBtn">Lock Discussion and Go to Support</button>
+        <button id="resolveBtn" class="hidden">Resolve Round</button>
+        <button id="nextRoundBtn" class="hidden">Next Round</button>
+        <button id="resetBtn">Reset</button>
+      </div>
+
+      <h3>Storylines</h3>
+      <div id="storylineBoard" class="storyline-board"></div>
+
+      <h3 id="supportTitle" class="hidden">Support</h3>
+      <div id="supportArea" class="hidden">
+        <div id="turnOrder" class="turn-order"></div>
+        <div id="turnPrompt" class="turn-prompt"></div>
+        <div id="playControls" class="play-controls"></div>
+        <div id="placedList" class="placed-list"></div>
+      </div>
+
+      <h3 id="resolutionTitle" class="hidden">Resolution</h3>
+      <div id="resolutionArea" class="hidden"></div>
+
+      <h3 id="leaderboardTitle" class="hidden">Influencer XP</h3>
+      <div id="leaderboard" class="leaderboard hidden"></div>
+    </section>
+  </main>
+
+  <script src="./app.js?v=setup-wizard-2"></script>
+</body>
+</html>
