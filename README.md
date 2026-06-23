@@ -3,6 +3,8 @@
 A browser-based local multiplayer implementation of *The Establishment*, using
 the rulebook and card assets included in this repository.
 
+**[Play the demo →](https://ashitaka-emishi.github.io/the-establishment/)**
+
 ## Play Locally
 
 From the repository root:
