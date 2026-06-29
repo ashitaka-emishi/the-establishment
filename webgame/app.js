@@ -553,6 +553,46 @@ function privateInfluencerMarkup(card, isPlaced) {
   `;
 }
 
+function storyPlacementCardMarkup(placement) {
+  const player = state.players[placement.playerId];
+  const canceled = placement.canceled ? " is-canceled" : "";
+  return `
+    <figure class="story-placement-card${canceled}">
+      <img src="${influencerSrc(placement.card.id)}" alt="${esc(placement.card.name)}" />
+      <figcaption>
+        <strong>${pad(placement.card.id)} ${esc(placement.card.name)}</strong>
+        <span>${esc(player?.name || "Unknown player")} | ${placement.card.realm} | ${placement.card.value}+${placement.card.xp}</span>
+        ${placement.canceled ? "<em>Canceled</em>" : ""}
+      </figcaption>
+    </figure>
+  `;
+}
+
+function storyPlacementSideMarkup(lane, side) {
+  const placements = state.support.placements.filter((placement) => placement.lane === lane && placement.side === side);
+  const label = side === "L" ? "Left" : "Right";
+  const placementItems = placements.length
+    ? placements.map(storyPlacementCardMarkup).join("")
+    : "<div class=\"story-placement-empty\">No cards</div>";
+  return `
+    <section class="story-placement-side" aria-label="Lane ${lane + 1} ${label} placements">
+      <h4>${label}</h4>
+      <div class="story-placement-stack">
+        ${placementItems}
+      </div>
+    </section>
+  `;
+}
+
+function storyPlacementBoardMarkup(lane) {
+  return `
+    <div class="story-placement-board">
+      ${storyPlacementSideMarkup(lane, "L")}
+      ${storyPlacementSideMarkup(lane, "R")}
+    </div>
+  `;
+}
+
 function renderPrivacyPanel() {
   if (!els.privacyPanel) return;
   if (!state.players.length || state.phase === "setup") {
@@ -784,7 +824,10 @@ function renderStorylines() {
     const restrictions = s.societyForNext ? `Restrictions: ${formatRestrictions(s.societyForNext.restrictions)}` : "Restrictions: none";
     meta.textContent = `Lane ${s.lane + 1} | Card ${s.card} | ${restrictions}`;
 
-    card.append(img, flipBtn, meta);
+    const placements = document.createElement("div");
+    placements.innerHTML = storyPlacementBoardMarkup(s.lane);
+
+    card.append(img, flipBtn, meta, placements.firstElementChild);
     els.storylineBoard.appendChild(card);
   });
 }
