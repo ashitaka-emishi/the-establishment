@@ -1,0 +1,49 @@
+---
+pagetitle: "The Establishment"
+page-layout: full
+title-block-style: none
+---
+
+::: {.hero-band}
+::: {.hero-copy}
+<div class="hero-title" role="heading" aria-level="1">The Establishment</div>
+
+Run a four-round local game without paper scorekeeping. The web referee handles setup, faction decks, storyline flow, support placement, guided resolution, XP, and save/resume.
+
+[Play the web game](webgame/){.btn .btn-primary .btn-lg}
+[Read the roadmap](roadmap.html){.btn .btn-outline-light .btn-lg}
+:::
+
+::: {.hero-cards}
+<img src="__docs__/cards/faction/faction-000_B.png" alt="Faction card back">
+<img src="__docs__/cards/faction/faction-001_B.png" alt="Faction card back">
+<img src="__docs__/cards/faction/faction-002_B.png" alt="Faction card back">
+<img src="__docs__/cards/faction/faction-003_B.png" alt="Faction card back">
+:::
+:::
+
+::: {.content-band}
+## Current Focus
+
+The first product target is a polished single-device local referee. Online multiplayer and Discord Activity support stay in the planning lane until the local game can be completed without physical cards.
+
+::: {.feature-grid}
+::: {.feature-item}
+### Playable App
+
+The custom HTML, CSS, and JavaScript game remains in `webgame/` so it can keep its own interaction model and assets.
+:::
+
+::: {.feature-item}
+### Product Roadmap
+
+The docs shell links the local-referee roadmap and future multiplayer plan without duplicating their source content.
+:::
+
+::: {.feature-item}
+### Static Deployment Path
+
+Quarto renders the public site into `_site/` and carries the playable app plus card assets as static resources.
+:::
+:::
+:::

@@ -1,0 +1,29 @@
+---
+title: "Play"
+---
+
+The playable referee is kept as a custom static web app at <a href="webgame/"><code>webgame/</code></a>.
+
+[Launch the game](webgame/){.btn .btn-primary}
+
+## Local Preview
+
+Run the static app directly from the repository root:
+
+```bash
+python3 -m http.server 4173
+```
+
+Then open <http://localhost:4173/webgame/>.
+
+## What the App Handles
+
+- Rulebook-aligned setup for 2-6 players.
+- Faction selection with faction-specific influencer decks.
+- Description card selection.
+- Four-round storyline flow.
+- Snake-order influencer placement.
+- Guided resolution scoring, XP awards, and round transitions.
+- Local save and resume.
+
+See <a href="https://github.com/ashitaka-emishi/the-establishment/blob/master/webgame/README.md"><code>webgame/README.md</code></a> for implementation details and current limitations.

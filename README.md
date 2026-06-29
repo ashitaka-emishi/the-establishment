@@ -18,6 +18,22 @@ Open [http://localhost:4173/webgame/](http://localhost:4173/webgame/).
 The game is a static HTML, CSS, and JavaScript application. It has no build step
 or package dependencies.
 
+## Build the Docs Site
+
+This repository includes a Quarto website shell for public docs and demo
+navigation. The playable app remains in `webgame/` and is copied into the
+rendered site as a static resource.
+
+Install Quarto, then render or preview the site project from the repository
+root:
+
+```bash
+quarto render site
+quarto preview site
+```
+
+The generated site is written to `_site/`.
+
 ## Features
 
 - Rulebook-aligned setup for 2-6 players
@@ -33,6 +49,7 @@ current limitations.
 
 ## Repository Layout
 
+- `site/` - Quarto website shell and navigation
 - `webgame/` - playable browser application
 - `__docs__/` - rulebook, storybook, and card assets
 - `docs/` - product roadmap and future multiplayer planning

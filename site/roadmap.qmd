@@ -1,0 +1,25 @@
+---
+title: "Roadmap"
+---
+
+The current product direction lives in tracked Markdown files so the source of truth stays easy to review in GitHub.
+
+## Local Referee
+
+The first production target is a polished local referee that can run a full game without physical cards.
+
+<a class="btn btn-primary" href="https://github.com/ashitaka-emishi/the-establishment/blob/master/docs/LOCAL_REFEREE_ROADMAP.md">Read the local referee roadmap</a>
+
+## Future Multiplayer
+
+Online multiplayer and Discord Activity support are later-phase work after rule fidelity, card data, scoring, and table UX stabilize.
+
+<a class="btn btn-secondary" href="https://github.com/ashitaka-emishi/the-establishment/blob/master/docs/MULTIPLAYER_PLAN.md">Read the multiplayer plan</a>
+
+## Milestone Sequence
+
+1. Product definition and backlog.
+2. Local referee beta.
+3. Rulebook fidelity and assets.
+4. Mobile and table UX polish.
+5. Multiplayer and Discord spike.
