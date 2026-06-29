@@ -578,6 +578,17 @@ button:hover { filter: brightness(1.1); }
   gap: 0.45rem;
 }
 
+.override-section {
+  border: 1px solid rgba(255, 209, 102, 0.28);
+  border-radius: 8px;
+  padding: 0.6rem;
+  background: rgba(255, 209, 102, 0.06);
+}
+
+.wide-field {
+  grid-column: 1 / -1;
+}
+
 .realm-checklist {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -618,6 +629,41 @@ button:hover { filter: brightness(1.1); }
 
 .score-good { color: var(--good); font-weight: 700; }
 .score-bad { color: var(--bad); font-weight: 700; }
+
+.override-pill {
+  display: inline-block;
+  margin-top: 0.2rem;
+  padding: 0.12rem 0.35rem;
+  border: 1px solid rgba(255, 209, 102, 0.45);
+  border-radius: 999px;
+  background: rgba(255, 209, 102, 0.12);
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.audit-log {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0.55rem 0;
+  padding: 0.65rem;
+  border: 1px solid rgba(255, 209, 102, 0.35);
+  border-radius: 10px;
+  background: rgba(32, 27, 12, 0.72);
+}
+
+.audit-log h4 {
+  margin: 0;
+}
+
+.audit-item {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.45rem 0.5rem;
+  border: 1px solid rgba(218, 236, 230, 0.14);
+  border-radius: 8px;
+  background: rgba(7, 25, 31, 0.54);
+}
 
 .leaderboard {
   display: grid;
