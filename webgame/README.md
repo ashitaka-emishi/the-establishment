@@ -36,6 +36,7 @@ Then open:
   and an in-game audit reason.
 - XP awards (one influencer per player per winning side per storyline).
 - Round transitions with 4-card redraw from each player deck.
+- Final round epilogue summary with per-player influence and XP standings.
 - Local save and resume after setup/game state changes.
 - Pass-and-play private views for setup choices, description cards, influencer
   hands, and face-down reserves.
@@ -54,6 +55,8 @@ During resolution, the app uses visible controls for each storyline's:
 - Storyline card numbering follows the rulebook numbering: `1-124`.
 - Starting storylines are preset to `1`, `32`, `63`, and `94`.
 - Description cards are currently represented by text because description-card image assets are not included in the repository.
+- The rulebook has no points-based winner; final standings summarize tracked
+  influence and XP for the epilogue discussion.
 - Saves use browser local storage with a versioned payload. Use Reset or Start Over to clear the saved game.
 - Manual override audit entries are saved with the current game and remain
   visible during resolution.

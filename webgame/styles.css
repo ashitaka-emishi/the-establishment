@@ -665,6 +665,42 @@ button:hover { filter: brightness(1.1); }
   background: rgba(7, 25, 31, 0.54);
 }
 
+.final-summary {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0.55rem 0;
+  padding: 0.75rem;
+  border: 1px solid rgba(128, 237, 153, 0.36);
+  border-radius: 10px;
+  background: rgba(13, 38, 24, 0.66);
+}
+
+.final-summary h4 {
+  margin: 0;
+}
+
+.final-storylines,
+.final-standings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.5rem;
+}
+
+.final-storyline,
+.final-standing {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.5rem;
+  border: 1px solid rgba(218, 236, 230, 0.14);
+  border-radius: 8px;
+  background: rgba(7, 25, 31, 0.58);
+}
+
+.final-storyline small,
+.final-standing small {
+  color: var(--muted);
+}
+
 .leaderboard {
   display: grid;
   gap: 0.25rem;
