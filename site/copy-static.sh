@@ -12,4 +12,5 @@ cp -R "$repo_dir/webgame" "$out_dir/webgame"
 cp -R "$repo_dir/docs" "$out_dir/docs"
 cp -R "$repo_dir/__docs__/cards" "$out_dir/__docs/cards"
 
+touch "$out_dir/.nojekyll"
 find "$out_dir" -name .DS_Store -delete

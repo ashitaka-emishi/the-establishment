@@ -3,7 +3,7 @@
 A browser-based local multiplayer implementation of *The Establishment*, using
 the rulebook and card assets included in this repository.
 
-**[Play the demo →](https://ashitaka-emishi.github.io/the-establishment/)**
+**[Open the live site and game demo →](https://ashitaka-emishi.github.io/the-establishment/)**
 
 ## Play Locally
 
@@ -21,8 +21,9 @@ or package dependencies.
 ## Build the Docs Site
 
 This repository includes a Quarto website shell for public docs and demo
-navigation. The playable app remains in `webgame/` and is copied into the
-rendered site as a static resource.
+navigation. The GitHub Pages workflow renders the site and publishes `_site/`.
+The playable app remains in `webgame/` and is copied into the rendered site as a
+static resource.
 
 Install Quarto, then render or preview the site project from the repository
 root:
