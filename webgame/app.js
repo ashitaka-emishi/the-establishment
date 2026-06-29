@@ -1328,6 +1328,56 @@ function renderOverrideAudit() {
   `;
 }
 
+function finalStandings() {
+  return state.players.map((player) => {
+    const cards = player.deck || [];
+    const totalXp = cards.reduce((sum, card) => sum + card.xp, 0);
+    const totalInfluence = cards.reduce((sum, card) => sum + card.value + card.xp, 0);
+    const topCard = [...cards].sort((a, b) => (b.value + b.xp) - (a.value + a.xp) || b.xp - a.xp || a.id - b.id)[0];
+    return {
+      player,
+      totalXp,
+      totalInfluence,
+      topCard
+    };
+  }).sort((a, b) => b.totalInfluence - a.totalInfluence || b.totalXp - a.totalXp || a.player.id - b.player.id);
+}
+
+function renderFinalSummary() {
+  if (state.round < 4 || state.resolution.length < state.storylines.length) return "";
+  const rows = finalStandings();
+  return `
+    <div class="final-summary" aria-label="Final game summary">
+      <div>
+        <div class="setup-progress">Game Complete</div>
+        <h4>Final Epilogues</h4>
+        <p class="hint">All four rounds are resolved. The storyline cards above now show the concluded epilogue cards for the faction discussion.</p>
+      </div>
+      <div class="final-storylines">
+        ${state.storylines.map((storyline) => `
+          <div class="final-storyline">
+            <strong>Lane ${storyline.lane + 1}</strong>
+            <span>Final card ${storyline.card}</span>
+            <small>${storyline.history.map((card) => pad(card)).join(" -> ")}</small>
+          </div>
+        `).join("")}
+      </div>
+      <div class="final-standings">
+        ${rows.map((row) => `
+          <div class="final-standing">
+            <strong>${esc(row.player.name)}</strong>
+            <span>Total influence ${row.totalInfluence}</span>
+            <span>Total XP ${row.totalXp}</span>
+            <small>${row.topCard
+              ? `Top influencer: ${pad(row.topCard.id)} ${esc(row.topCard.name)} (${row.topCard.value}+${row.topCard.xp})`
+              : "Top influencer: none"}</small>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
 function renderResolution() {
   els.resolutionTitle.classList.remove("hidden");
   els.resolutionArea.classList.remove("hidden");
@@ -1365,7 +1415,7 @@ function renderResolution() {
     `;
   }).join("");
 
-  els.resolutionArea.innerHTML = `${completed}${renderOverrideAudit()}${renderResolutionForm()}`;
+  els.resolutionArea.innerHTML = `${completed}${renderFinalSummary()}${renderOverrideAudit()}${renderResolutionForm()}`;
   const form = document.getElementById("resolutionLaneForm");
   if (form) {
     form.addEventListener("submit", (event) => {
