@@ -933,7 +933,9 @@ function createResolutionDraft() {
       overrideLeftTotal: "",
       overrideRightTotal: "",
       overrideWinner: "",
-      overrideReason: ""
+      overrideReason: "",
+      xpChoices: {},
+      xpChoiceWinner: null
     }))
   };
 }
@@ -982,6 +984,14 @@ function readCheckedValues(form, name) {
   return [...form.querySelectorAll(`input[name="${name}"]:checked`)].map((input) => input.value);
 }
 
+function readXpChoices(form) {
+  const choices = {};
+  form.querySelectorAll("[data-xp-choice-player]").forEach((select) => {
+    choices[select.dataset.xpChoicePlayer] = select.value;
+  });
+  return choices;
+}
+
 function readResolutionForm() {
   const form = document.getElementById("resolutionLaneForm");
   const current = state.resolutionDraft.lanes[state.resolutionDraft.laneIndex];
@@ -998,7 +1008,8 @@ function readResolutionForm() {
     overrideLeftTotal: form.elements.overrideLeftTotal.value.trim(),
     overrideRightTotal: form.elements.overrideRightTotal.value.trim(),
     overrideWinner: form.elements.overrideWinner.value,
-    overrideReason: form.elements.overrideReason.value.trim()
+    overrideReason: form.elements.overrideReason.value.trim(),
+    xpChoices: readXpChoices(form)
   };
 }
 
@@ -1081,7 +1092,28 @@ function buildOverrideAudit(lane, overrides, calculated, effective) {
   };
 }
 
-function awardXpForLane(placements, winner) {
+function xpChoiceGroupsForLane(placements, winner) {
+  const winners = placements.filter((p) => p.side === winner);
+  const byPlayer = new Map();
+  winners.forEach((p) => {
+    if (!byPlayer.has(p.playerId)) byPlayer.set(p.playerId, []);
+    byPlayer.get(p.playerId).push(p.card);
+  });
+
+  return [...byPlayer.entries()]
+    .map(([playerId, cards]) => ({
+      playerId,
+      playerName: state.players[playerId].name,
+      cards
+    }))
+    .filter((group) => group.cards.length > 1);
+}
+
+function missingXpChoices(groups, choices = {}) {
+  return groups.filter((group) => !group.cards.some((card) => card.uniqueId === choices[group.playerId]));
+}
+
+function awardXpForLane(placements, winner, choices = {}) {
   const awards = [];
   const winners = placements.filter((p) => p.side === winner);
   const byPlayer = new Map();
@@ -1092,7 +1124,8 @@ function awardXpForLane(placements, winner) {
 
   byPlayer.forEach((cards, pid) => {
     if (!cards.length) return;
-    const card = cards.find((candidate) => candidate.xp < candidate.maxXp) || cards[0];
+    const chosen = choices[pid] ? cards.find((candidate) => candidate.uniqueId === choices[pid]) : null;
+    const card = chosen || cards.find((candidate) => candidate.xp < candidate.maxXp) || cards[0];
     const awarded = card.xp < card.maxXp;
     if (awarded) card.xp += 1;
     awards.push({
@@ -1100,6 +1133,7 @@ function awardXpForLane(placements, winner) {
       playerName: state.players[pid].name,
       cardId: card.id,
       cardName: card.name,
+      cardUniqueId: card.uniqueId,
       awarded
     });
   });
@@ -1140,7 +1174,19 @@ function commitResolutionLane() {
     right: calculatedR,
     winner: calculatedWinner
   }, { left: l, right: r, winner });
-  const xpAwards = awardXpForLane(placements, winner);
+  const xpChoiceGroups = xpChoiceGroupsForLane(placements, winner);
+  const missingChoices = missingXpChoices(xpChoiceGroups, draft.xpChoices);
+  if (missingChoices.length) {
+    state.resolutionDraft.lanes[state.resolutionDraft.laneIndex] = {
+      ...draft,
+      xpChoiceWinner: winner
+    };
+    state.resolutionDraft.error = `Choose XP recipients for ${missingChoices.map((group) => group.playerName).join(", ")}.`;
+    saveGame();
+    renderResolution();
+    return;
+  }
+  const xpAwards = awardXpForLane(placements, winner, draft.xpChoices);
 
   storyline.card = draft.nextCard;
   storyline.history.push(draft.nextCard);
@@ -1211,6 +1257,34 @@ function lanePlacementSummary(lane) {
   }).join("");
 }
 
+function renderXpChoiceControls(draft) {
+  if (!draft.xpChoiceWinner) return "";
+  const placements = state.support.placements.filter((p) => p.lane === draft.lane);
+  const groups = xpChoiceGroupsForLane(placements, draft.xpChoiceWinner);
+  if (!groups.length) return "";
+
+  return `
+    <div class="resolution-section xp-choice-section">
+      <h5>XP recipients</h5>
+      <p class="hint">Choose one winning-side influencer for each player with multiple eligible cards.</p>
+      <div class="xp-choice-grid">
+        ${groups.map((group) => `
+          <label>${esc(group.playerName)}
+            <select data-xp-choice-player="${group.playerId}" name="xpChoice-${group.playerId}">
+              <option value="">Choose recipient</option>
+              ${group.cards.map((card) => `
+                <option value="${esc(card.uniqueId)}" ${draft.xpChoices?.[group.playerId] === card.uniqueId ? "selected" : ""}>
+                  ${pad(card.id)} | ${esc(card.name)} | XP ${card.xp}/${card.maxXp}
+                </option>
+              `).join("")}
+            </select>
+          </label>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
 function renderResolutionForm() {
   const draftState = state.resolutionDraft;
   if (!draftState || draftState.laneIndex >= draftState.lanes.length) {
@@ -1260,6 +1334,8 @@ function renderResolutionForm() {
         <h5>Canceled realms for this lane</h5>
         ${laneCancelChecklist(draft.lane, draft.canceledRealms)}
       </div>
+
+      ${renderXpChoiceControls(draft)}
 
       <div class="resolution-section">
         <h5>Next-round banned realms</h5>
