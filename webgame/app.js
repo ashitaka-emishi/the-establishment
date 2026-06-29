@@ -115,7 +115,8 @@ const state = {
   societyDeck: [],
   resolution: [],
   resolutionDraft: null,
-  privateViewPlayerId: null
+  privateViewPlayerId: null,
+  overrideLog: []
 };
 
 const setupState = {
@@ -261,6 +262,8 @@ function relinkSavedCards() {
     const deckCard = player?.deck?.find((card) => card.uniqueId === placement.card.uniqueId);
     if (deckCard) placement.card = deckCard;
   });
+
+  if (!Array.isArray(state.overrideLog)) state.overrideLog = [];
 }
 
 function createSavePayload() {
@@ -359,6 +362,7 @@ function resumeSavedGame() {
   if (!saved || saved.unsupported || saved.corrupt) return;
   Object.assign(state, saved.state);
   state.privateViewPlayerId = null;
+  if (!Array.isArray(state.overrideLog)) state.overrideLog = [];
   restoreSetupState(saved.setupState);
   relinkSavedCards();
   els.savePanel.innerHTML = "";
@@ -741,6 +745,7 @@ function startGame() {
   state.resolution = [];
   state.resolutionDraft = null;
   state.privateViewPlayerId = null;
+  state.overrideLog = [];
 
   els.setupPanel.classList.add("hidden");
   els.gamePanel.classList.remove("hidden");
@@ -924,7 +929,11 @@ function createResolutionDraft() {
       nextCard: storyline.card,
       bannedRealms: [],
       oppositePairs: "",
-      samePairs: ""
+      samePairs: "",
+      overrideLeftTotal: "",
+      overrideRightTotal: "",
+      overrideWinner: "",
+      overrideReason: ""
     }))
   };
 }
@@ -985,8 +994,22 @@ function readResolutionForm() {
     nextCard: Number(form.elements.nextCard.value),
     bannedRealms: readCheckedValues(form, "bannedRealm"),
     oppositePairs: form.elements.oppositePairs.value.trim(),
-    samePairs: form.elements.samePairs.value.trim()
+    samePairs: form.elements.samePairs.value.trim(),
+    overrideLeftTotal: form.elements.overrideLeftTotal.value.trim(),
+    overrideRightTotal: form.elements.overrideRightTotal.value.trim(),
+    overrideWinner: form.elements.overrideWinner.value,
+    overrideReason: form.elements.overrideReason.value.trim()
   };
+}
+
+function parseOverrideScore(value, label, errors) {
+  if (value === "" || value == null) return null;
+  const score = Number(value);
+  if (!Number.isInteger(score) || score < 0) {
+    errors.push(`${label} override must be a non-negative whole number.`);
+    return null;
+  }
+  return score;
 }
 
 function validateResolutionDraft(draft) {
@@ -1004,6 +1027,12 @@ function validateResolutionDraft(draft) {
   const opposite = parsePairs(draft.oppositePairs, "Opposite-side restriction");
   const same = parsePairs(draft.samePairs, "Same-side restriction");
   errors.push(...opposite.errors, ...same.errors);
+  const overrideLeftTotal = parseOverrideScore(draft.overrideLeftTotal, "Left total", errors);
+  const overrideRightTotal = parseOverrideScore(draft.overrideRightTotal, "Right total", errors);
+  const hasOverride = overrideLeftTotal != null || overrideRightTotal != null || draft.overrideWinner !== "";
+  if (hasOverride && draft.overrideReason.length < 3) {
+    errors.push("Manual overrides require a reason.");
+  }
 
   return {
     errors,
@@ -1011,7 +1040,44 @@ function validateResolutionDraft(draft) {
       banned: draft.bannedRealms,
       opposite: opposite.pairs,
       same: same.pairs
+    },
+    overrides: {
+      leftTotal: overrideLeftTotal,
+      rightTotal: overrideRightTotal,
+      winner: draft.overrideWinner || null,
+      reason: draft.overrideReason
     }
+  };
+}
+
+function applyScoreOverride(score, overrideTotal) {
+  if (overrideTotal == null) return score;
+  return {
+    ...score,
+    calculatedTotal: score.total,
+    total: overrideTotal,
+    overridden: true
+  };
+}
+
+function buildOverrideAudit(lane, overrides, calculated, effective) {
+  const changes = [];
+  if (overrides.leftTotal != null) {
+    changes.push(`Left total ${calculated.left.total} -> ${effective.left.total}`);
+  }
+  if (overrides.rightTotal != null) {
+    changes.push(`Right total ${calculated.right.total} -> ${effective.right.total}`);
+  }
+  if (overrides.winner && overrides.winner !== calculated.winner) {
+    changes.push(`Winner ${calculated.winner === "L" ? "Left" : "Right"} -> ${effective.winner === "L" ? "Left" : "Right"}`);
+  }
+  if (!changes.length) return null;
+  return {
+    round: state.round,
+    lane,
+    changes,
+    reason: overrides.reason,
+    recordedAt: new Date().toISOString()
   };
 }
 
@@ -1060,14 +1126,26 @@ function commitResolutionLane() {
   const right = placements.filter((p) => p.side === "R");
   const lSoc = draft.bonusSide === "L" ? draft.bonusValue : 0;
   const rSoc = draft.bonusSide === "R" ? draft.bonusValue : 0;
-  const l = computeSideScore(left, lSoc);
-  const r = computeSideScore(right, rSoc);
-  const winner = l.total === r.total ? (lSoc >= rSoc ? "L" : "R") : (l.total > r.total ? "L" : "R");
+  const calculatedL = computeSideScore(left, lSoc);
+  const calculatedR = computeSideScore(right, rSoc);
+  const calculatedWinner = calculatedL.total === calculatedR.total
+    ? (lSoc >= rSoc ? "L" : "R")
+    : (calculatedL.total > calculatedR.total ? "L" : "R");
+  const l = applyScoreOverride(calculatedL, validation.overrides.leftTotal);
+  const r = applyScoreOverride(calculatedR, validation.overrides.rightTotal);
+  const effectiveWinner = l.total === r.total ? (lSoc >= rSoc ? "L" : "R") : (l.total > r.total ? "L" : "R");
+  const winner = validation.overrides.winner || effectiveWinner;
+  const overrideAudit = buildOverrideAudit(draft.lane, validation.overrides, {
+    left: calculatedL,
+    right: calculatedR,
+    winner: calculatedWinner
+  }, { left: l, right: r, winner });
   const xpAwards = awardXpForLane(placements, winner);
 
   storyline.card = draft.nextCard;
   storyline.history.push(draft.nextCard);
   storyline.societyForNext = { societyId: draft.societyId, restrictions: validation.restrictions };
+  if (overrideAudit) state.overrideLog.push(overrideAudit);
 
   state.resolution.push({
     lane: draft.lane,
@@ -1077,6 +1155,8 @@ function commitResolutionLane() {
     l,
     r,
     winner,
+    calculatedWinner,
+    overrides: overrideAudit,
     nextCard: draft.nextCard,
     xpAwards
   });
@@ -1195,10 +1275,56 @@ function renderResolutionForm() {
         </label>
       </div>
 
+      <div class="resolution-section override-section">
+        <h5>Manual overrides</h5>
+        <div class="resolution-fields">
+          <label>Left total override
+            <input name="overrideLeftTotal" type="number" min="0" step="1" value="${esc(draft.overrideLeftTotal ?? "")}" placeholder="Calculated" />
+          </label>
+          <label>Right total override
+            <input name="overrideRightTotal" type="number" min="0" step="1" value="${esc(draft.overrideRightTotal ?? "")}" placeholder="Calculated" />
+          </label>
+          <label>Winner override
+            <select name="overrideWinner">
+              <option value="" ${(draft.overrideWinner ?? "") === "" ? "selected" : ""}>Calculated winner</option>
+              <option value="L" ${draft.overrideWinner === "L" ? "selected" : ""}>Left</option>
+              <option value="R" ${draft.overrideWinner === "R" ? "selected" : ""}>Right</option>
+            </select>
+          </label>
+          <label class="wide-field">Override reason
+            <input name="overrideReason" type="text" value="${esc(draft.overrideReason ?? "")}" placeholder="Correction or playtest ruling" />
+          </label>
+        </div>
+        <p class="hint">Overrides require a reason, are marked in results, and are saved in the current game audit trail.</p>
+      </div>
+
       <div class="row centered">
         <button type="submit">Resolve Lane ${draft.lane + 1}</button>
       </div>
     </form>
+  `;
+}
+
+function scoreSummary(label, score) {
+  const marker = score.overridden
+    ? ` <span class="override-pill">overridden from ${score.calculatedTotal}</span>`
+    : "";
+  return `${label}: ${score.total}${marker} (rating ${score.rating}, matches ${score.matchBonus}, society ${score.societyBonus})`;
+}
+
+function renderOverrideAudit() {
+  if (!state.overrideLog.length) return "";
+  return `
+    <div class="audit-log" aria-label="Manual override audit trail">
+      <h4>Override Audit</h4>
+      ${state.overrideLog.map((entry) => `
+        <div class="audit-item">
+          <strong>Round ${entry.round}, Lane ${entry.lane + 1}</strong>
+          <span>${esc(entry.changes.join("; "))}</span>
+          <span>Reason: ${esc(entry.reason)}</span>
+        </div>
+      `).join("")}
+    </div>
   `;
 }
 
@@ -1220,13 +1346,14 @@ function renderResolution() {
             Canceled: ${esc(r.canceledRealms.join(", ") || "none")}
           </div>
           <div class="${lWin ? "score-good" : ""}">
-            Left: ${r.l.total} (rating ${r.l.rating}, matches ${r.l.matchBonus}, society ${r.l.societyBonus})
+            ${scoreSummary("Left", r.l)}
           </div>
           <div class="${rWin ? "score-good" : ""}">
-            Right: ${r.r.total} (rating ${r.r.rating}, matches ${r.r.matchBonus}, society ${r.r.societyBonus})
+            ${scoreSummary("Right", r.r)}
           </div>
           <div>
             Winner: <strong>${r.winner === "L" ? "Left" : "Right"}</strong><br />
+            ${r.overrides ? `<span class="override-pill">${esc(r.overrides.changes.join("; "))}</span><br />` : ""}
             Next Card: ${r.nextCard}
           </div>
           <div>
@@ -1238,7 +1365,7 @@ function renderResolution() {
     `;
   }).join("");
 
-  els.resolutionArea.innerHTML = `${completed}${renderResolutionForm()}`;
+  els.resolutionArea.innerHTML = `${completed}${renderOverrideAudit()}${renderResolutionForm()}`;
   const form = document.getElementById("resolutionLaneForm");
   if (form) {
     form.addEventListener("submit", (event) => {
