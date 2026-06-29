@@ -24,7 +24,8 @@ Then open:
 - Draw 5 text description cards and select 3 for the player area.
 - Opening discussion with flippable storyline card images.
 - Snake-order support placement (1st pass forward, 2nd reverse, 3rd forward).
-- Restriction checks during support (if society restrictions were entered for that lane).
+- Restriction checks during support, with caught-before-next-turn and
+  not-caught-in-time rulings for society-restricted placements.
 - Guided resolution scoring:
   - influencer value
   - XP stars
@@ -59,10 +60,10 @@ During resolution, the app uses visible controls for each storyline's:
 - The rulebook has no points-based winner; final standings summarize tracked
   influence and XP for the epilogue discussion.
 - Saves use browser local storage with a versioned payload. Use Reset or Start Over to clear the saved game.
-- Pending resolution inputs, including XP recipient choices, are preserved by
-  save/resume until the lane is committed.
-- Manual override audit entries are saved with the current game and remain
-  visible during resolution.
+- Pending resolution inputs, XP recipient choices, and placement rulings are
+  preserved by save/resume until they are committed.
+- Manual override and placement ruling audit entries are saved with the
+  current game and remain visible during play.
 - Shared/table view avoids showing private setup choices and active hands.
   Open one player view at a time and pass the device when a player needs to
   review private information or place an influencer.
