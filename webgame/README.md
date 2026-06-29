@@ -34,7 +34,8 @@ Then open:
 - Lane-by-lane resolution form with inline validation.
 - Manual resolution overrides for lane totals and winners, with visible markers
   and an in-game audit reason.
-- XP awards (one influencer per player per winning side per storyline).
+- XP awards, including player choice when multiple winning-side influencers
+  are eligible on a storyline.
 - Round transitions with 4-card redraw from each player deck.
 - Final round epilogue summary with per-player influence and XP standings.
 - Local save and resume after setup/game state changes.
@@ -58,6 +59,8 @@ During resolution, the app uses visible controls for each storyline's:
 - The rulebook has no points-based winner; final standings summarize tracked
   influence and XP for the epilogue discussion.
 - Saves use browser local storage with a versioned payload. Use Reset or Start Over to clear the saved game.
+- Pending resolution inputs, including XP recipient choices, are preserved by
+  save/resume until the lane is committed.
 - Manual override audit entries are saved with the current game and remain
   visible during resolution.
 - Shared/table view avoids showing private setup choices and active hands.
