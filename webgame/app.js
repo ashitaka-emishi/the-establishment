@@ -114,7 +114,8 @@ const state = {
   },
   societyDeck: [],
   resolution: [],
-  resolutionDraft: null
+  resolutionDraft: null,
+  privateViewPlayerId: null
 };
 
 const setupState = {
@@ -173,6 +174,7 @@ const els = {
   phaseLabel: document.getElementById("phaseLabel"),
   storylineBoard: document.getElementById("storylineBoard"),
   toSupportBtn: document.getElementById("toSupportBtn"),
+  privacyPanel: document.getElementById("privacyPanel"),
   supportTitle: document.getElementById("supportTitle"),
   supportArea: document.getElementById("supportArea"),
   turnOrder: document.getElementById("turnOrder"),
@@ -190,6 +192,25 @@ const els = {
 
 function getFaction(factionId) {
   return factionCatalog.find((faction) => faction.id === factionId);
+}
+
+function privateInfoSummary() {
+  return "Private information: setup description choices, influencer hands, face-down reserves, and unplayed per-player cards.";
+}
+
+function currentPrivatePlayer() {
+  if (state.privateViewPlayerId == null) return null;
+  return state.players.find((player) => player.id === state.privateViewPlayerId) || null;
+}
+
+function openPrivateView(playerId) {
+  state.privateViewPlayerId = playerId;
+  render();
+}
+
+function closePrivateView() {
+  state.privateViewPlayerId = null;
+  render();
 }
 
 function serializeSetupState() {
@@ -243,10 +264,14 @@ function relinkSavedCards() {
 }
 
 function createSavePayload() {
+  const savedState = {
+    ...state,
+    privateViewPlayerId: null
+  };
   return {
     version: SAVE_VERSION,
     savedAt: new Date().toISOString(),
-    state,
+    state: savedState,
     setupState: serializeSetupState()
   };
 }
@@ -333,6 +358,7 @@ function resumeSavedGame() {
   const saved = readSave();
   if (!saved || saved.unsupported || saved.corrupt) return;
   Object.assign(state, saved.state);
+  state.privateViewPlayerId = null;
   restoreSetupState(saved.setupState);
   relinkSavedCards();
   els.savePanel.innerHTML = "";
@@ -511,6 +537,90 @@ function influencerCardMarkup(card) {
   `;
 }
 
+function privateInfluencerMarkup(card, isPlaced) {
+  return `
+    <figure class="mini-card influencer-mini ${isPlaced ? "is-placed" : ""}">
+      <img src="${influencerSrc(card.id)}" alt="${esc(card.name)}" />
+      <figcaption>
+        ${esc(card.name)} | ${card.realm} | ${card.value}+${card.xp}
+        ${isPlaced ? "<span>Placed this round</span>" : ""}
+      </figcaption>
+    </figure>
+  `;
+}
+
+function renderPrivacyPanel() {
+  if (!els.privacyPanel) return;
+  if (!state.players.length || state.phase === "setup") {
+    state.privateViewPlayerId = null;
+    els.privacyPanel.innerHTML = "";
+    return;
+  }
+
+  const unlocked = currentPrivatePlayer();
+  const playerButtons = state.players.map((player) => `
+    <button type="button" class="private-open-btn" data-private-player="${player.id}">
+      Open ${esc(player.name)}
+    </button>
+  `).join("");
+
+  if (!unlocked) {
+    els.privacyPanel.innerHTML = `
+      <section class="privacy-shell shared-mode" aria-label="Private player views">
+        <div>
+          <strong>Shared table view</strong>
+          <p>${privateInfoSummary()} Open one player view at a time and pass the device.</p>
+        </div>
+        <div class="private-actions">${playerButtons}</div>
+      </section>
+    `;
+  } else {
+    const faction = getFaction(unlocked.factionId);
+    const placedIds = new Set(state.support.placements
+      .filter((placement) => placement.playerId === unlocked.id)
+      .map((placement) => placement.card.uniqueId));
+    const activeTurn = state.phase === "support"
+      && state.support.turnIndex < state.support.snakeTurns.length
+      && state.support.snakeTurns[state.support.turnIndex] === unlocked.id;
+
+    els.privacyPanel.innerHTML = `
+      <section class="privacy-shell private-mode" aria-label="${esc(unlocked.name)} private view">
+        <div class="privacy-heading">
+          <div>
+            <strong>${esc(unlocked.name)} private view</strong>
+            <p>${esc(faction.name)}${activeTurn ? " | Current support turn" : ""}</p>
+          </div>
+          <button type="button" id="closePrivateViewBtn">Return to Shared Table</button>
+        </div>
+        <div class="private-grid">
+          <div>
+            <h4>Description cards</h4>
+            <div class="private-descriptions">
+              ${unlocked.descriptions.map((card) => `<div class="description-card locked">${esc(card.name)}</div>`).join("")}
+            </div>
+          </div>
+          <div>
+            <h4>Influencer hand</h4>
+            <div class="private-hand-grid">
+              ${unlocked.hand.map((card) => privateInfluencerMarkup(card, placedIds.has(card.uniqueId))).join("")}
+            </div>
+          </div>
+          <div>
+            <h4>Reserve</h4>
+            <p class="hint">${unlocked.reserveInfluencers.length} face-down influencers remain private.</p>
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
+  els.privacyPanel.querySelectorAll("[data-private-player]").forEach((button) => {
+    button.addEventListener("click", () => openPrivateView(Number(button.dataset.privatePlayer)));
+  });
+  const closeBtn = document.getElementById("closePrivateViewBtn");
+  if (closeBtn) closeBtn.addEventListener("click", closePrivateView);
+}
+
 function renderCardSetup() {
   const faction = getFaction(setupState.confirmed.factionId);
   const selected = setupState.drawnDescriptions.filter((card) => setupState.selectedDescriptions.has(card.id));
@@ -519,6 +629,7 @@ function renderCardSetup() {
   els.playersContainer.innerHTML = `
     <div class="wizard-shell">
       <div class="setup-progress">Player ${setupState.playerIndex + 1} of ${setupState.playerCount}</div>
+      <div class="privacy-note">Private setup view: pass the device to ${esc(setupState.confirmed.name)}. Description choices, hand, and reserves should not be shown to other players.</div>
       <div class="locked-choice">
         <strong>${esc(setupState.confirmed.name)}</strong>
         <span>${esc(faction.name)}</span>
@@ -606,7 +717,7 @@ function renderSetupReview() {
               <div>
                 <strong>${esc(player.name)}</strong>
                 <span>${esc(faction.name)}</span>
-                <small>${player.descriptions.map((card) => esc(card.name)).join(" / ")}</small>
+                <small>Private descriptions selected</small>
               </div>
             </article>
           `;
@@ -629,6 +740,7 @@ function startGame() {
   state.societyDeck = shuffle(allSociety);
   state.resolution = [];
   state.resolutionDraft = null;
+  state.privateViewPlayerId = null;
 
   els.setupPanel.classList.add("hidden");
   els.gamePanel.classList.remove("hidden");
@@ -683,6 +795,7 @@ function formatRestrictions(r) {
 
 function beginSupport() {
   state.phase = "support";
+  state.privateViewPlayerId = null;
   const order = shuffle(state.players.map((p) => p.id));
   state.support.order = order;
   state.support.snakeTurns = [...order, ...[...order].reverse(), ...order];
@@ -735,6 +848,20 @@ function renderSupport() {
   const already = state.support.placements.filter((p) => p.playerId === pid).length;
   els.turnPrompt.textContent = `${player.name} turn (${already + 1}/3 placements)`;
 
+  if (state.privateViewPlayerId !== pid) {
+    els.playControls.innerHTML = `
+      <div class="private-turn-lock">
+        <strong>${esc(player.name)} has the private turn.</strong>
+        <span>Open ${esc(player.name)}'s private view above, pass the device, then place an influencer.</span>
+      </div>
+    `;
+    els.placedList.innerHTML = state.support.placements.map((p) => {
+      const pl = state.players[p.playerId];
+      return `<div class="placed-item">${esc(pl.name)} placed ${pad(p.card.id)} (${esc(p.card.name)}, ${p.card.realm}, ${p.card.value}+${p.card.xp}) on Lane ${p.lane + 1} ${p.side === "L" ? "Left" : "Right"}</div>`;
+    }).join("");
+    return;
+  }
+
   const handOptions = player.hand
     .filter((h) => !state.support.placements.some((p) => p.card.uniqueId === h.uniqueId))
     .map((h) => `<option value="${esc(h.uniqueId)}">${pad(h.id)} | ${esc(h.name)} | ${h.realm} | ${h.value}+${h.xp}</option>`)
@@ -763,6 +890,7 @@ function renderSupport() {
 
     state.support.placements.push(placement);
     state.support.turnIndex += 1;
+    state.privateViewPlayerId = null;
     render();
   });
 
@@ -803,6 +931,7 @@ function createResolutionDraft() {
 
 function resolveRound() {
   state.phase = "resolution";
+  state.privateViewPlayerId = null;
   state.resolution = [];
   state.resolutionDraft = createResolutionDraft();
   render();
@@ -1152,6 +1281,7 @@ function nextRound() {
   }
   state.round += 1;
   state.phase = "opening";
+  state.privateViewPlayerId = null;
   state.support = { order: [], snakeTurns: [], turnIndex: 0, placements: [] };
   state.resolution = [];
   state.resolutionDraft = null;
@@ -1164,9 +1294,13 @@ function resetGame() {
 }
 
 function render() {
+  if (state.privateViewPlayerId != null && !state.players.some((player) => player.id === state.privateViewPlayerId)) {
+    state.privateViewPlayerId = null;
+  }
   els.roundLabel.textContent = String(state.round);
   els.phaseLabel.textContent = state.phase === "setup" ? "Setup" : state.phase[0].toUpperCase() + state.phase.slice(1);
 
+  renderPrivacyPanel();
   renderStorylines();
 
   els.toSupportBtn.classList.toggle("hidden", state.phase !== "opening");
