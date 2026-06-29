@@ -111,7 +111,8 @@ const state = {
     placements: []
   },
   societyDeck: [],
-  resolution: []
+  resolution: [],
+  resolutionDraft: null
 };
 
 const setupState = {
@@ -455,6 +456,7 @@ function startGame() {
   state.support = { order: [], snakeTurns: [], turnIndex: 0, placements: [] };
   state.societyDeck = shuffle(allSociety);
   state.resolution = [];
+  state.resolutionDraft = null;
 
   els.setupPanel.classList.add("hidden");
   els.gamePanel.classList.remove("hidden");
@@ -609,86 +611,305 @@ function computeSideScore(cards, society) {
   return { total: rating + matchBonus + societyBonus, rating, matchBonus, societyBonus, liveCount: live.length };
 }
 
+function createResolutionDraft() {
+  return {
+    laneIndex: 0,
+    error: "",
+    lanes: state.storylines.map((storyline) => ({
+      lane: storyline.lane,
+      societyId: state.societyDeck.pop() ?? allSociety[Math.floor(Math.random() * allSociety.length)],
+      bonusValue: 1,
+      bonusSide: "L",
+      canceledRealms: [],
+      nextCard: storyline.card,
+      bannedRealms: [],
+      oppositePairs: "",
+      samePairs: ""
+    }))
+  };
+}
+
 function resolveRound() {
   state.phase = "resolution";
   state.resolution = [];
-
-  state.storylines.forEach((s) => {
-    const societyId = state.societyDeck.pop() ?? allSociety[Math.floor(Math.random() * allSociety.length)];
-    const bonusInput = prompt(`Lane ${s.lane + 1}: Society ${pad(societyId)} bonus value (0-3)`, "1");
-    const dirInput = prompt(`Lane ${s.lane + 1}: Bonus side? Enter L or R`, "L");
-    const canceledInput = prompt(`Lane ${s.lane + 1}: canceled realms (comma-separated names, optional)`, "");
-
-    const placements = state.support.placements.filter((p) => p.lane === s.lane);
-    const canceledRealms = canceledInput.split(",").map((x) => x.trim()).filter(Boolean);
-    placements.forEach((p) => { p.canceled = canceledRealms.includes(p.card.realm); });
-
-    const left = placements.filter((p) => p.side === "L");
-    const right = placements.filter((p) => p.side === "R");
-
-    const lSoc = dirInput?.toUpperCase() === "L" ? Number(bonusInput || 0) : 0;
-    const rSoc = dirInput?.toUpperCase() === "R" ? Number(bonusInput || 0) : 0;
-
-    const l = computeSideScore(left, lSoc);
-    const r = computeSideScore(right, rSoc);
-
-    const winner = l.total === r.total ? (lSoc >= rSoc ? "L" : "R") : (l.total > r.total ? "L" : "R");
-
-    const winners = placements.filter((p) => p.side === winner);
-    const byPlayer = new Map();
-    winners.forEach((p) => {
-      if (!byPlayer.has(p.playerId)) byPlayer.set(p.playerId, []);
-      byPlayer.get(p.playerId).push(p.card);
-    });
-
-    byPlayer.forEach((cards, pid) => {
-      if (!cards.length) return;
-      let card = cards[0];
-      if (cards.length > 1) {
-        const pick = prompt(`${state.players[pid].name}: choose influencer id for XP on Lane ${s.lane + 1}. Options: ${cards.map((c) => pad(c.id)).join(", ")}`, pad(cards[0].id));
-        const found = cards.find((c) => pad(c.id) === String(pick).padStart(3, "0"));
-        if (found) card = found;
-      }
-      if (card.xp < card.maxXp) card.xp += 1;
-    });
-
-    const nextInput = prompt(`Lane ${s.lane + 1} winner is ${winner === "L" ? "Left" : "Right"}. Enter winning card number in parentheses (1-124).`, String(s.card));
-    const nextCard = Math.max(1, Math.min(124, Number(nextInput) || s.card));
-
-    const restrictions = {
-      banned: prompt(`Lane ${s.lane + 1}: next-round banned realms from society card (comma list, optional)`, "").split(",").map((x) => x.trim()).filter(Boolean),
-      opposite: parsePairs(prompt(`Lane ${s.lane + 1}: next-round opposite-side realm pairs (format: A/B,C/D)`, "")),
-      same: parsePairs(prompt(`Lane ${s.lane + 1}: next-round same-side forbidden realm pairs (format: A/B,C/D)`, ""))
-    };
-
-    s.card = nextCard;
-    s.history.push(nextCard);
-    s.societyForNext = { societyId, restrictions };
-
-    state.resolution.push({ lane: s.lane, societyId, canceledRealms, l, r, winner, nextCard });
-  });
-
+  state.resolutionDraft = createResolutionDraft();
   render();
 }
 
-function parsePairs(input) {
-  if (!input?.trim()) return [];
-  return input.split(",")
+function canonicalRealm(input) {
+  const normalized = input.trim().toLowerCase();
+  return realms.find((realm) => realm.toLowerCase() === normalized) || null;
+}
+
+function parsePairs(input, label = "pairs") {
+  if (!input?.trim()) return { pairs: [], errors: [] };
+  const errors = [];
+  const pairs = input.split(",")
     .map((entry) => entry.trim())
     .filter(Boolean)
     .map((pair) => {
       const [a, b] = pair.split("/").map((x) => x.trim());
-      return a && b ? { a, b } : null;
+      const left = a ? canonicalRealm(a) : null;
+      const right = b ? canonicalRealm(b) : null;
+      if (!left || !right) {
+        errors.push(`${label}: "${pair}" must use known realms in A/B format.`);
+        return null;
+      }
+      return { a: left, b: right };
     })
     .filter(Boolean);
+  return { pairs, errors };
+}
+
+function laneRealms(lane) {
+  return [...new Set(state.support.placements
+    .filter((placement) => placement.lane === lane)
+    .map((placement) => placement.card.realm))]
+    .sort((a, b) => realms.indexOf(a) - realms.indexOf(b));
+}
+
+function readCheckedValues(form, name) {
+  return [...form.querySelectorAll(`input[name="${name}"]:checked`)].map((input) => input.value);
+}
+
+function readResolutionForm() {
+  const form = document.getElementById("resolutionLaneForm");
+  const current = state.resolutionDraft.lanes[state.resolutionDraft.laneIndex];
+  if (!form) return current;
+  return {
+    ...current,
+    bonusValue: Number(form.elements.bonusValue.value),
+    bonusSide: form.elements.bonusSide.value,
+    canceledRealms: readCheckedValues(form, "canceledRealm"),
+    nextCard: Number(form.elements.nextCard.value),
+    bannedRealms: readCheckedValues(form, "bannedRealm"),
+    oppositePairs: form.elements.oppositePairs.value.trim(),
+    samePairs: form.elements.samePairs.value.trim()
+  };
+}
+
+function validateResolutionDraft(draft) {
+  const errors = [];
+  if (!Number.isInteger(draft.bonusValue) || draft.bonusValue < 0 || draft.bonusValue > 3) {
+    errors.push("Society bonus must be a whole number from 0 to 3.");
+  }
+  if (!["L", "R"].includes(draft.bonusSide)) {
+    errors.push("Choose which side receives the society bonus.");
+  }
+  if (!Number.isInteger(draft.nextCard) || draft.nextCard < 1 || draft.nextCard > 124) {
+    errors.push("Next storyline card must be a whole number from 1 to 124.");
+  }
+
+  const opposite = parsePairs(draft.oppositePairs, "Opposite-side restriction");
+  const same = parsePairs(draft.samePairs, "Same-side restriction");
+  errors.push(...opposite.errors, ...same.errors);
+
+  return {
+    errors,
+    restrictions: {
+      banned: draft.bannedRealms,
+      opposite: opposite.pairs,
+      same: same.pairs
+    }
+  };
+}
+
+function awardXpForLane(placements, winner) {
+  const awards = [];
+  const winners = placements.filter((p) => p.side === winner);
+  const byPlayer = new Map();
+  winners.forEach((p) => {
+    if (!byPlayer.has(p.playerId)) byPlayer.set(p.playerId, []);
+    byPlayer.get(p.playerId).push(p.card);
+  });
+
+  byPlayer.forEach((cards, pid) => {
+    if (!cards.length) return;
+    const card = cards.find((candidate) => candidate.xp < candidate.maxXp) || cards[0];
+    const awarded = card.xp < card.maxXp;
+    if (awarded) card.xp += 1;
+    awards.push({
+      playerId: pid,
+      playerName: state.players[pid].name,
+      cardId: card.id,
+      cardName: card.name,
+      awarded
+    });
+  });
+
+  return awards;
+}
+
+function commitResolutionLane() {
+  const draft = readResolutionForm();
+  state.resolutionDraft.lanes[state.resolutionDraft.laneIndex] = draft;
+  const validation = validateResolutionDraft(draft);
+
+  if (validation.errors.length) {
+    state.resolutionDraft.error = validation.errors.join(" ");
+    renderResolution();
+    return;
+  }
+
+  const storyline = state.storylines[draft.lane];
+  const placements = state.support.placements.filter((p) => p.lane === draft.lane);
+  placements.forEach((p) => { p.canceled = draft.canceledRealms.includes(p.card.realm); });
+
+  const left = placements.filter((p) => p.side === "L");
+  const right = placements.filter((p) => p.side === "R");
+  const lSoc = draft.bonusSide === "L" ? draft.bonusValue : 0;
+  const rSoc = draft.bonusSide === "R" ? draft.bonusValue : 0;
+  const l = computeSideScore(left, lSoc);
+  const r = computeSideScore(right, rSoc);
+  const winner = l.total === r.total ? (lSoc >= rSoc ? "L" : "R") : (l.total > r.total ? "L" : "R");
+  const xpAwards = awardXpForLane(placements, winner);
+
+  storyline.card = draft.nextCard;
+  storyline.history.push(draft.nextCard);
+  storyline.societyForNext = { societyId: draft.societyId, restrictions: validation.restrictions };
+
+  state.resolution.push({
+    lane: draft.lane,
+    societyId: draft.societyId,
+    canceledRealms: draft.canceledRealms,
+    restrictions: validation.restrictions,
+    l,
+    r,
+    winner,
+    nextCard: draft.nextCard,
+    xpAwards
+  });
+
+  state.resolutionDraft.laneIndex += 1;
+  state.resolutionDraft.error = "";
+  render();
+}
+
+function restrictionChecklist(name, selected = []) {
+  const selectedSet = new Set(selected);
+  return `
+    <div class="realm-checklist">
+      ${realms.map((realm) => `
+        <label>
+          <input type="checkbox" name="${name}" value="${esc(realm)}" ${selectedSet.has(realm) ? "checked" : ""} />
+          ${esc(realm)}
+        </label>
+      `).join("")}
+    </div>
+  `;
+}
+
+function laneCancelChecklist(lane, selected = []) {
+  const options = laneRealms(lane);
+  if (!options.length) return `<p class="hint">No influencers were placed on this lane.</p>`;
+  const selectedSet = new Set(selected);
+  return `
+    <div class="realm-checklist compact-checklist">
+      ${options.map((realm) => `
+        <label>
+          <input type="checkbox" name="canceledRealm" value="${esc(realm)}" ${selectedSet.has(realm) ? "checked" : ""} />
+          ${esc(realm)}
+        </label>
+      `).join("")}
+    </div>
+  `;
+}
+
+function lanePlacementSummary(lane) {
+  const placements = state.support.placements.filter((placement) => placement.lane === lane);
+  if (!placements.length) return `<p class="hint">No placements on this storyline.</p>`;
+  return placements.map((placement) => {
+    const player = state.players[placement.playerId];
+    return `
+      <div class="placed-item">
+        ${placement.side === "L" ? "Left" : "Right"}:
+        ${esc(player.name)} - ${pad(placement.card.id)} ${esc(placement.card.name)}
+        (${placement.card.realm}, ${placement.card.value}+${placement.card.xp})
+      </div>
+    `;
+  }).join("");
+}
+
+function renderResolutionForm() {
+  const draftState = state.resolutionDraft;
+  if (!draftState || draftState.laneIndex >= draftState.lanes.length) {
+    return `
+      <div class="res-block">
+        <strong>Resolution complete.</strong>
+        <p class="hint">Use ${state.round >= 4 ? "Game Complete" : "Next Round"} when everyone has reviewed the results.</p>
+      </div>
+    `;
+  }
+
+  const draft = draftState.lanes[draftState.laneIndex];
+  const storyline = state.storylines[draft.lane];
+  return `
+    <form class="resolution-form" id="resolutionLaneForm" novalidate>
+      <div class="resolution-heading">
+        <div>
+          <div class="setup-progress">Lane ${draft.lane + 1} of ${draftState.lanes.length}</div>
+          <h4>Resolve Storyline ${storyline.card}</h4>
+        </div>
+        <img src="${societySrc(draft.societyId)}" alt="Society ${draft.societyId}" />
+      </div>
+
+      ${draftState.error ? `<div class="form-error">${esc(draftState.error)}</div>` : ""}
+
+      <div class="resolution-section">
+        <h5>Placed Influencers</h5>
+        <div class="placed-list">${lanePlacementSummary(draft.lane)}</div>
+      </div>
+
+      <div class="resolution-fields">
+        <label>Society bonus
+          <input name="bonusValue" type="number" min="0" max="3" step="1" value="${draft.bonusValue}" />
+        </label>
+        <label>Bonus side
+          <select name="bonusSide">
+            <option value="L" ${draft.bonusSide === "L" ? "selected" : ""}>Left</option>
+            <option value="R" ${draft.bonusSide === "R" ? "selected" : ""}>Right</option>
+          </select>
+        </label>
+        <label>Winning branch card
+          <input name="nextCard" type="number" min="1" max="124" step="1" value="${draft.nextCard}" />
+        </label>
+      </div>
+
+      <div class="resolution-section">
+        <h5>Canceled realms for this lane</h5>
+        ${laneCancelChecklist(draft.lane, draft.canceledRealms)}
+      </div>
+
+      <div class="resolution-section">
+        <h5>Next-round banned realms</h5>
+        ${restrictionChecklist("bannedRealm", draft.bannedRealms)}
+      </div>
+
+      <div class="resolution-fields">
+        <label>Next-round opposite-side realm pairs
+          <input name="oppositePairs" type="text" value="${esc(draft.oppositePairs)}" placeholder="Finance/Labor, Media/Street" />
+        </label>
+        <label>Next-round same-side forbidden pairs
+          <input name="samePairs" type="text" value="${esc(draft.samePairs)}" placeholder="Occult/Law, Elite/Underworld" />
+        </label>
+      </div>
+
+      <div class="row centered">
+        <button type="submit">Resolve Lane ${draft.lane + 1}</button>
+      </div>
+    </form>
+  `;
 }
 
 function renderResolution() {
   els.resolutionTitle.classList.remove("hidden");
   els.resolutionArea.classList.remove("hidden");
-  els.resolutionArea.innerHTML = state.resolution.map((r) => {
+  const completed = state.resolution.map((r) => {
     const lWin = r.winner === "L";
     const rWin = r.winner === "R";
+    const xp = r.xpAwards.length
+      ? r.xpAwards.map((award) => `${esc(award.playerName)}: ${pad(award.cardId)} ${esc(award.cardName)}${award.awarded ? " +1 XP" : " at max XP"}`).join("<br />")
+      : "none";
     return `
       <div class="res-block">
         <div class="res-grid">
@@ -707,11 +928,23 @@ function renderResolution() {
             Winner: <strong>${r.winner === "L" ? "Left" : "Right"}</strong><br />
             Next Card: ${r.nextCard}
           </div>
+          <div>
+            XP awards:<br />${xp}
+          </div>
         </div>
         <img src="${societySrc(r.societyId)}" alt="Society ${r.societyId}" style="max-width:220px;margin-top:.4rem;" />
       </div>
     `;
   }).join("");
+
+  els.resolutionArea.innerHTML = `${completed}${renderResolutionForm()}`;
+  const form = document.getElementById("resolutionLaneForm");
+  if (form) {
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      commitResolutionLane();
+    });
+  }
 
   renderLeaderboard();
 }
@@ -733,6 +966,7 @@ function renderLeaderboard() {
 }
 
 function nextRound() {
+  if (state.resolution.length < state.storylines.length) return;
   if (state.round >= 4) {
     alert("Game complete after 4 rounds.");
     return;
@@ -741,6 +975,7 @@ function nextRound() {
   state.phase = "opening";
   state.support = { order: [], snakeTurns: [], turnIndex: 0, placements: [] };
   state.resolution = [];
+  state.resolutionDraft = null;
   drawHands();
   render();
 }
@@ -766,9 +1001,14 @@ function render() {
   if (state.phase === "support") renderSupport();
   if (state.phase === "resolution") renderResolution();
 
-  if (state.round === 4 && state.phase === "resolution") {
+  const resolutionComplete = state.phase === "resolution" && state.resolution.length >= state.storylines.length;
+  els.nextRoundBtn.disabled = state.phase === "resolution" && !resolutionComplete;
+
+  if (state.round === 4 && state.phase === "resolution" && resolutionComplete) {
     els.nextRoundBtn.textContent = "Game Complete";
     els.nextRoundBtn.disabled = true;
+  } else if (state.phase === "resolution" && !resolutionComplete) {
+    els.nextRoundBtn.textContent = "Resolve All Lanes";
   } else {
     els.nextRoundBtn.textContent = "Next Round";
     els.nextRoundBtn.disabled = false;
