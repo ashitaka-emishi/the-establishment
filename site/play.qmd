@@ -27,3 +27,9 @@ Then open <http://localhost:4173/webgame/>.
 - Local save and resume.
 
 See <a href="https://github.com/ashitaka-emishi/the-establishment/blob/master/webgame/README.md"><code>webgame/README.md</code></a> for implementation details and current limitations.
+
+## Playtest Checklist
+
+Use the tracked checklist when validating a complete local-referee game:
+
+<a class="btn btn-secondary" href="https://github.com/ashitaka-emishi/the-establishment/blob/master/docs/FULL_GAME_PLAYTEST_CHECKLIST.md">Open the full-game playtest checklist</a>

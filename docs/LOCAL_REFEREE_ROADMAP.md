@@ -47,7 +47,9 @@ views, and include manual overrides.
 Audit card metadata and rules, create missing description-card assets, verify
 scoring and XP behavior, and produce a full-game playtest checklist.
 See [RULEBOOK_METADATA_AUDIT.md](RULEBOOK_METADATA_AUDIT.md) for the tracked
-rulebook and card metadata audit.
+rulebook and card metadata audit, and
+[FULL_GAME_PLAYTEST_CHECKLIST.md](FULL_GAME_PLAYTEST_CHECKLIST.md) for the
+repeatable complete-game checklist.
 
 ### M3: Mobile and Table UX Polish
 

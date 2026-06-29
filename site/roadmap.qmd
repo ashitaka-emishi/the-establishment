@@ -10,6 +10,8 @@ The first production target is a polished local referee that can run a full game
 
 <a class="btn btn-primary" href="https://github.com/ashitaka-emishi/the-establishment/blob/master/docs/LOCAL_REFEREE_ROADMAP.md">Read the local referee roadmap</a>
 
+<a class="btn btn-secondary" href="https://github.com/ashitaka-emishi/the-establishment/blob/master/docs/FULL_GAME_PLAYTEST_CHECKLIST.md">Open the playtest checklist</a>
+
 ## Future Multiplayer
 
 Online multiplayer and Discord Activity support are later-phase work after rule fidelity, card data, scoring, and table UX stabilize.
