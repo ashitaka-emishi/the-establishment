@@ -46,14 +46,16 @@ The generated site is written to `_site/`.
 - Responsive local multiplayer interface
 
 See [webgame/README.md](webgame/README.md) for implementation details and
-current limitations.
+current limitations. Use
+[docs/FULL_GAME_PLAYTEST_CHECKLIST.md](docs/FULL_GAME_PLAYTEST_CHECKLIST.md)
+for repeatable complete-game validation.
 
 ## Repository Layout
 
 - `site/` - Quarto website shell and navigation
 - `webgame/` - playable browser application
 - `__docs__/` - rulebook, storybook, and card assets
-- `docs/` - product roadmap and future multiplayer planning
+- `docs/` - product roadmap, playtest checklist, and future multiplayer planning
 
 ## Roadmap
 
