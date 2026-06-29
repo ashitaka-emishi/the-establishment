@@ -465,6 +465,8 @@ button:hover { filter: brightness(1.1); }
 }
 
 .story-card {
+  display: grid;
+  gap: 0.5rem;
   border: 1px solid rgba(255, 209, 102, 0.35);
   border-radius: 12px;
   padding: 0.5rem;
@@ -478,9 +480,97 @@ button:hover { filter: brightness(1.1); }
 }
 
 .story-meta {
-  margin-top: 0.38rem;
   font-size: 0.88rem;
   color: var(--muted);
+}
+
+.story-placement-board {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.story-placement-side {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 0.4rem;
+  border: 1px solid rgba(218, 236, 230, 0.14);
+  border-radius: 8px;
+  background: rgba(3, 20, 27, 0.58);
+}
+
+.story-placement-side h4 {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+}
+
+.story-placement-stack {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.story-placement-card {
+  display: grid;
+  grid-template-columns: minmax(42px, 0.38fr) minmax(0, 1fr);
+  gap: 0.35rem;
+  align-items: start;
+  margin: 0;
+  min-width: 0;
+  padding: 0.35rem;
+  border: 1px solid rgba(125, 249, 214, 0.18);
+  border-radius: 8px;
+  background: rgba(7, 25, 31, 0.72);
+}
+
+.story-placement-card img {
+  width: 100%;
+  border-radius: 5px;
+  display: block;
+}
+
+.story-placement-card figcaption {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+
+.story-placement-card strong,
+.story-placement-card span {
+  overflow-wrap: anywhere;
+}
+
+.story-placement-card strong {
+  color: var(--ink);
+  font-size: 0.8rem;
+}
+
+.story-placement-card em {
+  color: var(--bad);
+  font-style: normal;
+  font-weight: 700;
+}
+
+.story-placement-card.is-canceled {
+  opacity: 0.68;
+  border-color: rgba(255, 111, 97, 0.36);
+}
+
+.story-placement-empty {
+  min-height: 62px;
+  display: grid;
+  place-items: center;
+  padding: 0.35rem;
+  border: 1px dashed rgba(218, 236, 230, 0.18);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  text-align: center;
 }
 
 .turn-order {
