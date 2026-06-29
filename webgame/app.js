@@ -98,6 +98,8 @@ const influencerMeta = {
 };
 
 const allSociety = Array.from({ length: 16 }, (_, i) => i);
+const SAVE_VERSION = 1;
+const SAVE_KEY = "the-establishment-local-game";
 
 const state = {
   round: 1,
@@ -161,6 +163,7 @@ function shuffle(arr) {
 const els = {
   playerCount: document.getElementById("playerCount"),
   buildPlayersBtn: document.getElementById("buildPlayersBtn"),
+  savePanel: document.getElementById("savePanel"),
   startGameBtn: document.getElementById("startGameBtn"),
   playersContainer: document.getElementById("playersContainer"),
   setupIntro: document.getElementById("setupIntro"),
@@ -187,6 +190,170 @@ const els = {
 
 function getFaction(factionId) {
   return factionCatalog.find((faction) => faction.id === factionId);
+}
+
+function serializeSetupState() {
+  return {
+    ...setupState,
+    selectedDescriptions: [...setupState.selectedDescriptions]
+  };
+}
+
+function restoreSetupState(savedSetup) {
+  Object.assign(setupState, {
+    active: Boolean(savedSetup?.active),
+    playerCount: savedSetup?.playerCount ?? 3,
+    playerIndex: savedSetup?.playerIndex ?? 0,
+    players: savedSetup?.players ?? [],
+    carouselIndex: savedSetup?.carouselIndex ?? 0,
+    draftName: savedSetup?.draftName ?? "Player 1",
+    confirmed: savedSetup?.confirmed ?? null,
+    pendingDeck: savedSetup?.pendingDeck ?? [],
+    pendingHand: savedSetup?.pendingHand ?? [],
+    pendingReserve: savedSetup?.pendingReserve ?? [],
+    drawnDescriptions: savedSetup?.drawnDescriptions ?? [],
+    selectedDescriptions: new Set(savedSetup?.selectedDescriptions ?? []),
+    descriptionDrawPile: savedSetup?.descriptionDrawPile ?? []
+  });
+}
+
+function relinkPlayerCards(players) {
+  players.forEach((player) => {
+    const deckCards = new Map((player.deck || []).map((card) => [card.uniqueId, card]));
+    player.hand = (player.hand || []).map((card) => deckCards.get(card.uniqueId) || card);
+    player.reserveInfluencers = (player.reserveInfluencers || []).map((card) => deckCards.get(card.uniqueId) || card);
+  });
+}
+
+function relinkSavedCards() {
+  relinkPlayerCards(state.players);
+  relinkPlayerCards(setupState.players);
+
+  if (setupState.pendingDeck.length) {
+    const pendingCards = new Map(setupState.pendingDeck.map((card) => [card.uniqueId, card]));
+    setupState.pendingHand = setupState.pendingHand.map((card) => pendingCards.get(card.uniqueId) || card);
+    setupState.pendingReserve = setupState.pendingReserve.map((card) => pendingCards.get(card.uniqueId) || card);
+  }
+
+  state.support.placements.forEach((placement) => {
+    const player = state.players[placement.playerId];
+    const deckCard = player?.deck?.find((card) => card.uniqueId === placement.card.uniqueId);
+    if (deckCard) placement.card = deckCard;
+  });
+}
+
+function createSavePayload() {
+  return {
+    version: SAVE_VERSION,
+    savedAt: new Date().toISOString(),
+    state,
+    setupState: serializeSetupState()
+  };
+}
+
+function readSave() {
+  let raw;
+  try {
+    raw = localStorage.getItem(SAVE_KEY);
+  } catch {
+    return null;
+  }
+
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed.version !== SAVE_VERSION) return { unsupported: true, savedAt: parsed.savedAt };
+    return parsed;
+  } catch {
+    return { corrupt: true };
+  }
+}
+
+function hasMeaningfulSaveState() {
+  return setupState.active || state.phase !== "setup" || state.players.length > 0;
+}
+
+function saveGame() {
+  if (!hasMeaningfulSaveState()) return;
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(createSavePayload()));
+  } catch {
+    // Saving is a convenience layer; gameplay should continue if storage is unavailable.
+  }
+}
+
+function clearSave() {
+  try {
+    localStorage.removeItem(SAVE_KEY);
+  } catch {
+    // Ignore storage failures during an explicit start-over request.
+  }
+}
+
+function formatSavedAt(savedAt) {
+  if (!savedAt) return "unknown time";
+  const date = new Date(savedAt);
+  if (Number.isNaN(date.getTime())) return "unknown time";
+  return date.toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+}
+
+function renderSavePanel(saved = readSave()) {
+  if (!els.savePanel) return;
+  if (!saved) {
+    els.savePanel.innerHTML = "";
+    return;
+  }
+
+  const message = saved.unsupported
+    ? "A saved game uses an older save format."
+    : saved.corrupt
+      ? "A saved game could not be read."
+      : `Saved game from ${formatSavedAt(saved.savedAt)}.`;
+
+  els.savePanel.innerHTML = `
+    <div class="save-panel">
+      <div>
+        <strong>${message}</strong>
+        <p>${saved.unsupported || saved.corrupt ? "Start over to clear it." : "Resume it or start over with a fresh setup."}</p>
+      </div>
+      <div class="save-actions">
+        ${saved.unsupported || saved.corrupt ? "" : "<button id=\"resumeGameBtn\" type=\"button\">Resume</button>"}
+        <button id="clearSaveBtn" type="button">Start Over</button>
+      </div>
+    </div>
+  `;
+
+  const resumeBtn = document.getElementById("resumeGameBtn");
+  if (resumeBtn) resumeBtn.addEventListener("click", resumeSavedGame);
+  document.getElementById("clearSaveBtn").addEventListener("click", startOver);
+}
+
+function resumeSavedGame() {
+  const saved = readSave();
+  if (!saved || saved.unsupported || saved.corrupt) return;
+  Object.assign(state, saved.state);
+  restoreSetupState(saved.setupState);
+  relinkSavedCards();
+  els.savePanel.innerHTML = "";
+  els.playerCount.value = String(setupState.playerCount || 3);
+
+  if (state.phase === "setup") {
+    els.setupPanel.classList.remove("hidden");
+    els.gamePanel.classList.add("hidden");
+    els.setupIntro.classList.toggle("hidden", setupState.active);
+    renderSetupWizard();
+    return;
+  }
+
+  els.setupPanel.classList.add("hidden");
+  els.gamePanel.classList.remove("hidden");
+  render();
+}
+
+function startOver() {
+  clearSave();
+  location.reload();
 }
 
 function usedFactionIds() {
@@ -241,6 +408,7 @@ function beginSetup() {
   setupState.selectedDescriptions = new Set();
   setupState.descriptionDrawPile = shuffle(descriptionDeck);
   els.setupIntro.classList.add("hidden");
+  els.savePanel.innerHTML = "";
   els.startGameBtn.classList.add("hidden");
   els.startGameBtn.disabled = true;
   renderSetupWizard();
@@ -296,6 +464,7 @@ function renderFactionSetup() {
   const nameInput = document.getElementById("setupPlayerName");
   nameInput.addEventListener("input", () => {
     setupState.draftName = nameInput.value;
+    saveGame();
   });
 
   document.getElementById("prevFactionBtn").addEventListener("click", () => {
@@ -310,6 +479,7 @@ function renderFactionSetup() {
     const name = nameInput.value.trim() || `Player ${setupState.playerIndex + 1}`;
     confirmFaction(faction.id, name);
   });
+  saveGame();
 }
 
 function confirmFaction(factionId, name) {
@@ -390,6 +560,7 @@ function renderCardSetup() {
   });
 
   document.getElementById("finishPlayerBtn").addEventListener("click", finishPlayerSetup);
+  saveGame();
 }
 
 function finishPlayerSetup() {
@@ -445,6 +616,7 @@ function renderSetupReview() {
   `;
   els.startGameBtn.classList.remove("hidden");
   els.startGameBtn.disabled = false;
+  saveGame();
 }
 
 function startGame() {
@@ -944,6 +1116,13 @@ function renderResolution() {
       event.preventDefault();
       commitResolutionLane();
     });
+    ["input", "change"].forEach((eventName) => {
+      form.addEventListener(eventName, () => {
+        state.resolutionDraft.lanes[state.resolutionDraft.laneIndex] = readResolutionForm();
+        state.resolutionDraft.error = "";
+        saveGame();
+      });
+    });
   }
 
   renderLeaderboard();
@@ -981,7 +1160,7 @@ function nextRound() {
 }
 
 function resetGame() {
-  location.reload();
+  startOver();
 }
 
 function render() {
@@ -1013,6 +1192,7 @@ function render() {
     els.nextRoundBtn.textContent = "Next Round";
     els.nextRoundBtn.disabled = false;
   }
+  saveGame();
 }
 
 els.buildPlayersBtn.addEventListener("click", beginSetup);
@@ -1022,4 +1202,5 @@ els.resolveBtn.addEventListener("click", resolveRound);
 els.nextRoundBtn.addEventListener("click", nextRound);
 els.resetBtn.addEventListener("click", resetGame);
 
+renderSavePanel();
 renderSetupWizard();

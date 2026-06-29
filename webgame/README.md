@@ -34,6 +34,7 @@ Then open:
 - Lane-by-lane resolution form with inline validation.
 - XP awards (one influencer per player per winning side per storyline).
 - Round transitions with 4-card redraw from each player deck.
+- Local save and resume after setup/game state changes.
 
 ## Resolution inputs
 
@@ -49,3 +50,4 @@ During resolution, the app uses visible controls for each storyline's:
 - Storyline card numbering follows the rulebook numbering: `1-124`.
 - Starting storylines are preset to `1`, `32`, `63`, and `94`.
 - Description cards are currently represented by text because description-card image assets are not included in the repository.
+- Saves use browser local storage with a versioned payload. Use Reset or Start Over to clear the saved game.
