@@ -110,13 +110,15 @@ const state = {
     order: [],
     snakeTurns: [],
     turnIndex: 0,
-    placements: []
+    placements: [],
+    pendingRuling: null
   },
   societyDeck: [],
   resolution: [],
   resolutionDraft: null,
   privateViewPlayerId: null,
-  overrideLog: []
+  overrideLog: [],
+  rulingLog: []
 };
 
 const setupState = {
@@ -257,13 +259,23 @@ function relinkSavedCards() {
     setupState.pendingReserve = setupState.pendingReserve.map((card) => pendingCards.get(card.uniqueId) || card);
   }
 
+  if (!state.support || typeof state.support !== "object") state.support = { order: [], snakeTurns: [], turnIndex: 0, placements: [], pendingRuling: null };
+  if (!Array.isArray(state.support.placements)) state.support.placements = [];
+  if (!("pendingRuling" in state.support)) state.support.pendingRuling = null;
   state.support.placements.forEach((placement) => {
     const player = state.players[placement.playerId];
     const deckCard = player?.deck?.find((card) => card.uniqueId === placement.card.uniqueId);
     if (deckCard) placement.card = deckCard;
   });
+  if (state.support.pendingRuling?.placement) {
+    const pendingPlacement = state.support.pendingRuling.placement;
+    const player = state.players[pendingPlacement.playerId];
+    const deckCard = player?.deck?.find((card) => card.uniqueId === pendingPlacement.card.uniqueId);
+    if (deckCard) pendingPlacement.card = deckCard;
+  }
 
   if (!Array.isArray(state.overrideLog)) state.overrideLog = [];
+  if (!Array.isArray(state.rulingLog)) state.rulingLog = [];
 }
 
 function createSavePayload() {
@@ -556,12 +568,14 @@ function privateInfluencerMarkup(card, isPlaced) {
 function storyPlacementCardMarkup(placement) {
   const player = state.players[placement.playerId];
   const canceled = placement.canceled ? " is-canceled" : "";
+  const illegal = placement.illegalRuling ? " is-illegal-kept" : "";
   return `
-    <figure class="story-placement-card${canceled}">
+    <figure class="story-placement-card${canceled}${illegal}">
       <img src="${influencerSrc(placement.card.id)}" alt="${esc(placement.card.name)}" />
       <figcaption>
         <strong>${pad(placement.card.id)} ${esc(placement.card.name)}</strong>
         <span>${esc(player?.name || "Unknown player")} | ${placement.card.realm} | ${placement.card.value}+${placement.card.xp}</span>
+        ${placement.illegalRuling ? "<em>Missed illegal placement</em>" : ""}
         ${placement.canceled ? "<em>Canceled</em>" : ""}
       </figcaption>
     </figure>
@@ -780,12 +794,13 @@ function startGame() {
   state.round = 1;
   state.phase = "opening";
   state.storylines = [1, 32, 63, 94].map((n, idx) => ({ lane: idx, card: n, history: [n], societyForNext: null }));
-  state.support = { order: [], snakeTurns: [], turnIndex: 0, placements: [] };
+  state.support = { order: [], snakeTurns: [], turnIndex: 0, placements: [], pendingRuling: null };
   state.societyDeck = shuffle(allSociety);
   state.resolution = [];
   state.resolutionDraft = null;
   state.privateViewPlayerId = null;
   state.overrideLog = [];
+  state.rulingLog = [];
 
   els.setupPanel.classList.add("hidden");
   els.gamePanel.classList.remove("hidden");
@@ -849,6 +864,7 @@ function beginSupport() {
   state.support.snakeTurns = [...order, ...[...order].reverse(), ...order];
   state.support.turnIndex = 0;
   state.support.placements = [];
+  state.support.pendingRuling = null;
   render();
 }
 
@@ -878,6 +894,97 @@ function restrictionViolates(placement, targetLane, targetSide) {
   return null;
 }
 
+function placementSummaryText(placement) {
+  const player = state.players[placement.playerId];
+  const side = placement.side === "L" ? "Left" : "Right";
+  return `${esc(player?.name || "Unknown player")} placed ${pad(placement.card.id)} (${esc(placement.card.name)}, ${placement.card.realm}, ${placement.card.value}+${placement.card.xp}) on Lane ${placement.lane + 1} ${side}`;
+}
+
+function rulingSummaryText(entry) {
+  const outcome = entry.outcome === "caught"
+    ? "caught before next turn; card removed and turn forfeited"
+    : "not caught in time; card remains and counts";
+  return `${esc(entry.playerName)} ${outcome}: ${pad(entry.cardId)} ${esc(entry.cardName)} on Lane ${entry.lane + 1} ${entry.side === "L" ? "Left" : "Right"} (${esc(entry.violation)})`;
+}
+
+function recordPlacementRuling(placement, violation, outcome) {
+  const player = state.players[placement.playerId];
+  const entry = {
+    round: state.round,
+    turnNumber: state.support.turnIndex + 1,
+    playerId: placement.playerId,
+    playerName: player?.name || "Unknown player",
+    lane: placement.lane,
+    side: placement.side,
+    cardId: placement.card.id,
+    cardName: placement.card.name,
+    cardUniqueId: placement.card.uniqueId,
+    violation,
+    outcome,
+    recordedAt: new Date().toISOString()
+  };
+  state.rulingLog.push(entry);
+  return entry;
+}
+
+function completeIllegalPlacementRuling(outcome) {
+  const pending = state.support.pendingRuling;
+  if (!pending) return;
+
+  const { placement, violation } = pending;
+  const entry = recordPlacementRuling(placement, violation, outcome);
+  if (outcome === "missed") {
+    placement.illegalRuling = {
+      violation,
+      outcome,
+      recordedAt: entry.recordedAt
+    };
+    state.support.placements.push(placement);
+  }
+
+  state.support.pendingRuling = null;
+  state.support.turnIndex += 1;
+  state.privateViewPlayerId = null;
+  render();
+}
+
+function supportRulingLogMarkup() {
+  if (!state.rulingLog.length) return "";
+  return `
+    <div class="support-ruling-log" aria-label="Placement ruling log">
+      <strong>Placement Rulings</strong>
+      ${state.rulingLog.map((entry) => `<div class="ruling-item">${rulingSummaryText(entry)}</div>`).join("")}
+    </div>
+  `;
+}
+
+function placedListMarkup() {
+  const placements = state.support.placements.map((placement) => {
+    const ruling = placement.illegalRuling
+      ? `<span class="ruling-note">Ruling: ${esc(placement.illegalRuling.violation)}; not caught in time, counts during resolution.</span>`
+      : "";
+    return `<div class="placed-item">${placementSummaryText(placement)}${ruling}</div>`;
+  }).join("");
+  return `${placements}${supportRulingLogMarkup()}`;
+}
+
+function pendingRulingMarkup(pending) {
+  const { placement, violation } = pending;
+  const player = state.players[placement.playerId];
+  return `
+    <div class="ruling-panel" aria-live="polite">
+      <strong>Restricted placement ruling</strong>
+      <p>${esc(player?.name || "Unknown player")} attempted ${pad(placement.card.id)} ${esc(placement.card.name)} on Lane ${placement.lane + 1} ${placement.side === "L" ? "Left" : "Right"}.</p>
+      <p>${esc(violation)}</p>
+      <div class="ruling-actions">
+        <button id="catchIllegalPlacementBtn" type="button">Caught Before Next Turn</button>
+        <button id="keepIllegalPlacementBtn" type="button">Not Caught In Time</button>
+      </div>
+      <p class="hint">Caught placements are removed and the player forfeits this turn. Missed placements stay on the storyline and count during resolution.</p>
+    </div>
+  `;
+}
+
 function renderSupport() {
   els.supportTitle.classList.remove("hidden");
   els.supportArea.classList.remove("hidden");
@@ -888,6 +995,7 @@ function renderSupport() {
   if (state.support.turnIndex >= state.support.snakeTurns.length) {
     els.turnPrompt.textContent = "All placements complete.";
     els.playControls.innerHTML = "";
+    els.placedList.innerHTML = placedListMarkup();
     return;
   }
 
@@ -896,6 +1004,14 @@ function renderSupport() {
   const already = state.support.placements.filter((p) => p.playerId === pid).length;
   els.turnPrompt.textContent = `${player.name} turn (${already + 1}/3 placements)`;
 
+  if (state.support.pendingRuling) {
+    els.playControls.innerHTML = pendingRulingMarkup(state.support.pendingRuling);
+    document.getElementById("catchIllegalPlacementBtn").addEventListener("click", () => completeIllegalPlacementRuling("caught"));
+    document.getElementById("keepIllegalPlacementBtn").addEventListener("click", () => completeIllegalPlacementRuling("missed"));
+    els.placedList.innerHTML = placedListMarkup();
+    return;
+  }
+
   if (state.privateViewPlayerId !== pid) {
     els.playControls.innerHTML = `
       <div class="private-turn-lock">
@@ -903,10 +1019,7 @@ function renderSupport() {
         <span>Open ${esc(player.name)}'s private view above, pass the device, then place an influencer.</span>
       </div>
     `;
-    els.placedList.innerHTML = state.support.placements.map((p) => {
-      const pl = state.players[p.playerId];
-      return `<div class="placed-item">${esc(pl.name)} placed ${pad(p.card.id)} (${esc(p.card.name)}, ${p.card.realm}, ${p.card.value}+${p.card.xp}) on Lane ${p.lane + 1} ${p.side === "L" ? "Left" : "Right"}</div>`;
-    }).join("");
+    els.placedList.innerHTML = placedListMarkup();
     return;
   }
 
@@ -932,7 +1045,14 @@ function renderSupport() {
     const placement = { playerId: pid, lane, side, card, canceled: false };
     const violation = restrictionViolates(placement, lane, side);
     if (violation) {
-      alert(`Illegal placement: ${violation}`);
+      state.support.pendingRuling = {
+        turnIndex: state.support.turnIndex,
+        placement,
+        violation,
+        promptedAt: new Date().toISOString()
+      };
+      saveGame();
+      render();
       return;
     }
 
@@ -942,10 +1062,7 @@ function renderSupport() {
     render();
   });
 
-  els.placedList.innerHTML = state.support.placements.map((p) => {
-    const pl = state.players[p.playerId];
-    return `<div class="placed-item">${esc(pl.name)} placed ${pad(p.card.id)} (${esc(p.card.name)}, ${p.card.realm}, ${p.card.value}+${p.card.xp}) on Lane ${p.lane + 1} ${p.side === "L" ? "Left" : "Right"}</div>`;
-  }).join("");
+  els.placedList.innerHTML = placedListMarkup();
 }
 
 function computeSideScore(cards, society) {
@@ -1290,11 +1407,15 @@ function lanePlacementSummary(lane) {
   if (!placements.length) return `<p class="hint">No placements on this storyline.</p>`;
   return placements.map((placement) => {
     const player = state.players[placement.playerId];
+    const ruling = placement.illegalRuling
+      ? `<br /><span class="ruling-note">Ruling: ${esc(placement.illegalRuling.violation)}; not caught in time, counts.</span>`
+      : "";
     return `
       <div class="placed-item">
         ${placement.side === "L" ? "Left" : "Right"}:
         ${esc(player.name)} - ${pad(placement.card.id)} ${esc(placement.card.name)}
         (${placement.card.realm}, ${placement.card.value}+${placement.card.xp})
+        ${ruling}
       </div>
     `;
   }).join("");
@@ -1432,17 +1553,24 @@ function scoreSummary(label, score) {
 }
 
 function renderOverrideAudit() {
-  if (!state.overrideLog.length) return "";
+  if (!state.overrideLog.length && !state.rulingLog.length) return "";
+  const rulingItems = state.rulingLog.map((entry) => `
+    <div class="audit-item">
+      <strong>Round ${entry.round}, Turn ${entry.turnNumber}</strong>
+      <span>${rulingSummaryText(entry)}</span>
+    </div>
+  `).join("");
+  const overrideItems = state.overrideLog.map((entry) => `
+    <div class="audit-item">
+      <strong>Round ${entry.round}, Lane ${entry.lane + 1}</strong>
+      <span>${esc(entry.changes.join("; "))}</span>
+      <span>Reason: ${esc(entry.reason)}</span>
+    </div>
+  `).join("");
   return `
-    <div class="audit-log" aria-label="Manual override audit trail">
-      <h4>Override Audit</h4>
-      ${state.overrideLog.map((entry) => `
-        <div class="audit-item">
-          <strong>Round ${entry.round}, Lane ${entry.lane + 1}</strong>
-          <span>${esc(entry.changes.join("; "))}</span>
-          <span>Reason: ${esc(entry.reason)}</span>
-        </div>
-      `).join("")}
+    <div class="audit-log" aria-label="Rulings and overrides audit trail">
+      <h4>Rulings and Overrides</h4>
+      ${rulingItems}${overrideItems}
     </div>
   `;
 }
@@ -1578,7 +1706,7 @@ function nextRound() {
   state.round += 1;
   state.phase = "opening";
   state.privateViewPlayerId = null;
-  state.support = { order: [], snakeTurns: [], turnIndex: 0, placements: [] };
+  state.support = { order: [], snakeTurns: [], turnIndex: 0, placements: [], pendingRuling: null };
   state.resolution = [];
   state.resolutionDraft = null;
   drawHands();
