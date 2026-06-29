@@ -7,6 +7,8 @@ website:
   title: "The Establishment"
   site-url: "https://ashitaka-emishi.github.io/the-establishment/"
   repo-url: "https://github.com/ashitaka-emishi/the-establishment"
+  repo-branch: master
+  repo-subdir: site
   repo-actions: [source, issue]
   navbar:
     logo: "__docs__/cards/faction/faction-000_B.png"

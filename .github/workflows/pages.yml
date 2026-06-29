@@ -37,7 +37,7 @@ jobs:
           test -f _site/docs/LOCAL_REFEREE_ROADMAP.md
           test -f _site/webgame/index.html
           test -f _site/webgame/app.js
-          test -f _site/__docs/cards/faction/faction-000_B.png
+          test -f _site/__docs__/cards/faction/faction-000_B.png
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
