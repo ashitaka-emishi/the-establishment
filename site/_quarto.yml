@@ -1,0 +1,37 @@
+project:
+  type: website
+  output-dir: ../_site
+  post-render: "bash copy-static.sh"
+
+website:
+  title: "The Establishment"
+  site-url: "https://ashitaka-emishi.github.io/the-establishment/"
+  repo-url: "https://github.com/ashitaka-emishi/the-establishment"
+  repo-actions: [source, issue]
+  navbar:
+    logo: "__docs__/cards/faction/faction-000_B.png"
+    left:
+      - href: index.qmd
+        text: Home
+      - href: play.qmd
+        text: Play
+      - href: roadmap.qmd
+        text: Roadmap
+    right:
+      - icon: github
+        href: "https://github.com/ashitaka-emishi/the-establishment"
+        aria-label: GitHub repository
+  page-footer:
+    left: "The Establishment local referee"
+    right:
+      - text: "GitHub"
+        href: "https://github.com/ashitaka-emishi/the-establishment"
+
+format:
+  html:
+    theme:
+      light: cosmo
+      dark: darkly
+    css: styles/site.css
+    toc: false
+    link-external-newwindow: true
