@@ -25,18 +25,19 @@ Then open:
 - Opening discussion with flippable storyline card images.
 - Snake-order support placement (1st pass forward, 2nd reverse, 3rd forward).
 - Restriction checks during support (if society restrictions were entered for that lane).
-- Resolution scoring:
+- Guided resolution scoring:
   - influencer value
   - XP stars
   - matching realm bonus (`+1` per pair, `+1` per additional match)
   - society side bonus
   - tie breaker by society-assisted side
+- Lane-by-lane resolution form with inline validation.
 - XP awards (one influencer per player per winning side per storyline).
 - Round transitions with 4-card redraw from each player deck.
 
-## Manual inputs (required)
+## Resolution inputs
 
-During resolution, the app asks for each storyline's:
+During resolution, the app uses visible controls for each storyline's:
 
   - society bonus value and side
   - canceled realms
