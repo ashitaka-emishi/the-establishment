@@ -95,6 +95,30 @@ button:hover { filter: brightness(1.1); }
 
 .hidden { display: none !important; }
 
+.save-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem;
+  margin: 0.6rem 0 0.8rem;
+  border: 1px solid rgba(125, 249, 214, 0.35);
+  border-radius: 10px;
+  background: rgba(3, 20, 27, 0.86);
+}
+
+.save-panel p {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+}
+
+.save-actions {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 #playersContainer {
   display: grid;
   gap: 0.75rem;
@@ -547,6 +571,18 @@ button:hover { filter: brightness(1.1); }
 }
 
 @media (max-width: 640px) {
+  .save-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .save-actions {
+    justify-content: stretch;
+  }
+
+  .save-actions button {
+    flex: 1 1 130px;
+  }
+
   .faction-carousel {
     grid-template-columns: 38px minmax(0, 1fr) 38px;
     gap: 0.4rem;
