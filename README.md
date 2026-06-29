@@ -35,6 +35,12 @@ current limitations.
 
 - `webgame/` - playable browser application
 - `__docs__/` - rulebook, storybook, and card assets
+- `docs/` - product roadmap and future multiplayer planning
+
+## Roadmap
+
+The first product target is a polished local referee that does not require
+physical cards. See [docs/LOCAL_REFEREE_ROADMAP.md](docs/LOCAL_REFEREE_ROADMAP.md).
 
 ## Contributing
 
