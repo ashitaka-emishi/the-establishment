@@ -57,7 +57,7 @@ for repeatable complete-game validation.
 - `webgame/` - playable browser application
 - `scripts/` - deterministic asset generation helpers
 - `__docs__/` - rulebook, storybook, and card assets
-- `docs/` - product roadmap, playtest checklist, and future multiplayer planning
+- `docs/` - product roadmap, playtest checklist, architecture spikes, and future multiplayer planning
 
 ## Roadmap
 

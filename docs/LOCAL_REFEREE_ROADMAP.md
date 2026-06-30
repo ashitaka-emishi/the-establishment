@@ -59,4 +59,7 @@ phase guidance, and add optional beginner-mode rule prompts.
 ### M4: Multiplayer and Discord Spike
 
 After the local referee is stable, evaluate the multiplayer architecture and
-Discord Activity path. See [MULTIPLAYER_PLAN.md](MULTIPLAYER_PLAN.md).
+Discord Activity path. See
+[MULTIPLAYER_DISCORD_SPIKE.md](MULTIPLAYER_DISCORD_SPIKE.md) for the current
+go/no-go recommendation and [MULTIPLAYER_PLAN.md](MULTIPLAYER_PLAN.md) for the
+implementation plan.
