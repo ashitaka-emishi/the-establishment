@@ -93,6 +93,18 @@ button:hover { filter: brightness(1.1); }
   font-size: 0.9rem;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .hidden { display: none !important; }
 
 .save-panel {
@@ -221,7 +233,9 @@ button:hover { filter: brightness(1.1); }
 }
 
 .description-card {
-  min-height: 58px;
+  position: relative;
+  min-height: 0;
+  padding: 0;
   border: 1px solid rgba(255, 209, 102, 0.32);
   border-radius: 6px;
   background: #060a1a;
@@ -229,6 +243,8 @@ button:hover { filter: brightness(1.1); }
   font-weight: 900;
   text-align: center;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+  aspect-ratio: 618 / 983;
 }
 
 .description-card.selected,
@@ -238,8 +254,14 @@ button:hover { filter: brightness(1.1); }
 }
 
 .description-card.locked {
-  display: grid;
-  place-items: center;
+  display: block;
+}
+
+.description-card img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
 }
 
 .description-picker {

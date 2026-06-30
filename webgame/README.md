@@ -21,7 +21,7 @@ Then open:
 - Wrapping faction carousel with identity and reference card sides.
 - Unique faction selection with a faction-specific 7-card influencer deck.
 - Rulebook setup draw of 4 face-up influencers and 3 face-down reserves.
-- Draw 5 text description cards and select 3 for the player area.
+- Draw 5 generated description-card images and select 3 for the player area.
 - Opening discussion with flippable storyline card images.
 - Snake-order support placement (1st pass forward, 2nd reverse, 3rd forward).
 - Restriction checks during support, with caught-before-next-turn and
@@ -56,7 +56,9 @@ During resolution, the app uses visible controls for each storyline's:
 
 - Storyline card numbering follows the rulebook numbering: `1-124`.
 - Starting storylines are preset to `1`, `32`, `63`, and `94`.
-- Description cards are currently represented by text because description-card image assets are not included in the repository.
+- Description-card images are generated from the tracked deck list with
+  `scripts/generate_description_cards.py` and stored in
+  `__docs__/cards/description/`.
 - The rulebook has no points-based winner; final standings summarize tracked
   influence and XP for the epilogue discussion.
 - Saves use browser local storage with a versioned payload. Use Reset or Start Over to clear the saved game.

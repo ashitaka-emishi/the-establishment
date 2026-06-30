@@ -20,7 +20,7 @@ Then open <http://localhost:4173/webgame/>.
 
 - Rulebook-aligned setup for 2-6 players.
 - Faction selection with faction-specific influencer decks.
-- Description card selection.
+- Description card image selection.
 - Four-round storyline flow.
 - Snake-order influencer placement.
 - Guided resolution scoring, XP awards, and round transitions.
