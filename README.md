@@ -43,6 +43,7 @@ The generated site is written to `_site/`.
 - Four-round storyline flow
 - Snake-order influencer placement
 - Society restrictions, scoring, and XP tracking
+- Optional beginner-mode phase reminders
 - Responsive local multiplayer interface
 
 See [webgame/README.md](webgame/README.md) for implementation details and
