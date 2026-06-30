@@ -40,6 +40,7 @@ Then open:
 - Round transitions with 4-card redraw from each player deck.
 - Final round epilogue summary with per-player influence and XP standings.
 - Local save and resume after setup/game state changes.
+- Optional beginner mode with concise phase reminders.
 - Pass-and-play private views for setup choices, description cards, influencer
   hands, and face-down reserves.
 
@@ -62,6 +63,7 @@ During resolution, the app uses visible controls for each storyline's:
 - The rulebook has no points-based winner; final standings summarize tracked
   influence and XP for the epilogue discussion.
 - Saves use browser local storage with a versioned payload. Use Reset or Start Over to clear the saved game.
+- Beginner mode is quiet by default and can be toggled during setup or play.
 - Pending resolution inputs, XP recipient choices, and placement rulings are
   preserved by save/resume until they are committed.
 - Manual override and placement ruling audit entries are saved with the

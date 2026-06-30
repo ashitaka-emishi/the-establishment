@@ -62,6 +62,31 @@ main {
   gap: 1rem;
 }
 
+.mode-bar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 44px;
+  padding: 0.38rem 0.65rem;
+  border: 1px solid rgba(125, 249, 214, 0.28);
+  border-radius: 999px;
+  background: rgba(3, 20, 27, 0.78);
+  color: var(--ink);
+}
+
+.mode-toggle input {
+  min-height: 0;
+  width: 1.05rem;
+  height: 1.05rem;
+  padding: 0;
+  accent-color: var(--accent-2);
+}
+
 .panel {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -102,6 +127,31 @@ button:hover { filter: brightness(1.1); }
 .hint {
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.guide-panel {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0.65rem 0;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgba(125, 249, 214, 0.32);
+  border-left: 4px solid var(--accent-2);
+  border-radius: 8px;
+  background: rgba(5, 25, 31, 0.84);
+}
+
+.guide-panel strong {
+  color: var(--accent-2);
+}
+
+.guide-panel ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.guide-panel li {
+  margin: 0.2rem 0;
+  color: var(--ink);
 }
 
 .sr-only {
@@ -926,6 +976,15 @@ button:hover { filter: brightness(1.1); }
 
   main {
     padding: 0.75rem;
+  }
+
+  .mode-bar {
+    justify-content: stretch;
+  }
+
+  .mode-toggle {
+    width: 100%;
+    justify-content: center;
   }
 
   .panel {

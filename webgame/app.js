@@ -118,7 +118,8 @@ const state = {
   resolutionDraft: null,
   privateViewPlayerId: null,
   overrideLog: [],
-  rulingLog: []
+  rulingLog: [],
+  beginnerMode: false
 };
 
 const setupState = {
@@ -174,6 +175,9 @@ const els = {
   setupIntro: document.getElementById("setupIntro"),
   setupPanel: document.getElementById("setupPanel"),
   gamePanel: document.getElementById("gamePanel"),
+  beginnerModeToggle: document.getElementById("beginnerModeToggle"),
+  setupGuide: document.getElementById("setupGuide"),
+  phaseGuide: document.getElementById("phaseGuide"),
   roundLabel: document.getElementById("roundLabel"),
   phaseLabel: document.getElementById("phaseLabel"),
   storylineBoard: document.getElementById("storylineBoard"),
@@ -200,6 +204,130 @@ function getFaction(factionId) {
 
 function privateInfoSummary() {
   return "Private information: setup description choices, influencer hands, face-down reserves, and unplayed per-player cards.";
+}
+
+function beginnerModeOn() {
+  return Boolean(state.beginnerMode);
+}
+
+function renderBeginnerControls() {
+  if (els.beginnerModeToggle) els.beginnerModeToggle.checked = beginnerModeOn();
+}
+
+function guidePanelMarkup(title, items) {
+  if (!beginnerModeOn()) return "";
+  return `
+    <section class="guide-panel" aria-label="${esc(title)}">
+      <strong>${esc(title)}</strong>
+      <ul>
+        ${items.map((item) => `<li>${esc(item)}</li>`).join("")}
+      </ul>
+    </section>
+  `;
+}
+
+function setupGuideItems() {
+  if (!setupState.active) {
+    return [
+      "Set the player count before anyone chooses a faction.",
+      "Setup will walk one player at a time through private choices."
+    ];
+  }
+
+  if (setupState.playerIndex >= setupState.playerCount) {
+    return [
+      "Check that each player has a faction and private descriptions.",
+      "Start Game only when everyone is ready for the shared opening discussion."
+    ];
+  }
+
+  if (setupState.confirmed) {
+    return [
+      `Pass the device to ${setupState.confirmed.name}; this setup view is private.`,
+      "Select exactly 3 description cards, then continue to the next player.",
+      "Keep the influencer hand and reserve hidden from the table."
+    ];
+  }
+
+  return [
+    `Name Player ${setupState.playerIndex + 1} and choose an unused faction.`,
+    "Use the arrows to compare faction cards before confirming.",
+    "After confirming, that player will make private description choices."
+  ];
+}
+
+function renderSetupGuide() {
+  if (!els.setupGuide) return;
+  els.setupGuide.innerHTML = guidePanelMarkup("Beginner setup reminder", setupGuideItems());
+}
+
+function phaseGuideItems() {
+  if (!state.players.length || state.phase === "setup") return [];
+
+  if (state.phase === "opening") {
+    return [
+      "Discuss the four visible storylines before anyone commits cards.",
+      "Flip storyline cards when the table needs the alternate side.",
+      "Move to Support when players are ready to place influencers."
+    ];
+  }
+
+  if (state.phase === "support") {
+    if (state.support.pendingRuling) {
+      return [
+        "Resolve the restricted placement before the next support turn.",
+        "Caught placements are removed and the player forfeits this turn.",
+        "Missed placements stay on the storyline and count during resolution."
+      ];
+    }
+
+    if (state.support.turnIndex >= state.support.snakeTurns.length) {
+      return [
+        "All support turns are complete.",
+        "Review the placed influencers, then resolve the round lane by lane."
+      ];
+    }
+
+    const pid = state.support.snakeTurns[state.support.turnIndex];
+    const player = state.players[pid];
+    const activePrivate = state.privateViewPlayerId === pid;
+    return activePrivate
+      ? [
+          `${player.name} chooses one unplaced influencer from their private hand.`,
+          "Pick a storyline and side, then place the card.",
+          "The app will stop for a ruling if the placement breaks current restrictions."
+        ]
+      : [
+          `${player.name} has the current private support turn.`,
+          "Open that player's private view and pass the device.",
+          "Only the active player should see their hand and reserves."
+        ];
+  }
+
+  if (state.phase === "resolution") {
+    const draft = state.resolutionDraft;
+    if (!draft || draft.laneIndex >= draft.lanes.length) {
+      return [
+        "Resolution for this round is complete.",
+        state.round >= 4 ? "Review the final epilogue summary." : "Use Next Round after everyone has reviewed the results."
+      ];
+    }
+
+    const lane = draft.lanes[draft.laneIndex];
+    return [
+      `Resolve Lane ${lane.lane + 1}: set society bonus, canceled realms, and the next storyline card.`,
+      "Add next-round restrictions from the society card for this storyline.",
+      "Use overrides only for corrections or table rulings, and include a reason."
+    ];
+  }
+
+  return [];
+}
+
+function renderPhaseGuide() {
+  if (!els.phaseGuide) return;
+  const items = phaseGuideItems();
+  els.phaseGuide.innerHTML = items.length ? guidePanelMarkup("Beginner phase reminder", items) : "";
 }
 
 function currentPrivatePlayer() {
@@ -277,6 +405,7 @@ function relinkSavedCards() {
 
   if (!Array.isArray(state.overrideLog)) state.overrideLog = [];
   if (!Array.isArray(state.rulingLog)) state.rulingLog = [];
+  state.beginnerMode = Boolean(state.beginnerMode);
 }
 
 function createSavePayload() {
@@ -391,6 +520,7 @@ function resumeSavedGame() {
 
   els.setupPanel.classList.add("hidden");
   els.gamePanel.classList.remove("hidden");
+  if (els.setupGuide) els.setupGuide.innerHTML = "";
   render();
 }
 
@@ -458,6 +588,8 @@ function beginSetup() {
 }
 
 function renderSetupWizard() {
+  renderBeginnerControls();
+  renderSetupGuide();
   if (!setupState.active) {
     els.playersContainer.innerHTML = "";
     els.startGameBtn.classList.add("hidden");
@@ -801,6 +933,7 @@ function renderSetupReview() {
 
 function startGame() {
   if (setupState.players.length !== setupState.playerCount) return;
+  const beginnerMode = state.beginnerMode;
   state.players = setupState.players;
   state.round = 1;
   state.phase = "opening";
@@ -812,6 +945,7 @@ function startGame() {
   state.privateViewPlayerId = null;
   state.overrideLog = [];
   state.rulingLog = [];
+  state.beginnerMode = beginnerMode;
 
   els.setupPanel.classList.add("hidden");
   els.gamePanel.classList.remove("hidden");
@@ -1732,6 +1866,8 @@ function render() {
   if (state.privateViewPlayerId != null && !state.players.some((player) => player.id === state.privateViewPlayerId)) {
     state.privateViewPlayerId = null;
   }
+  renderBeginnerControls();
+  if (state.phase !== "setup" && els.setupGuide) els.setupGuide.innerHTML = "";
   els.roundLabel.textContent = String(state.round);
   els.phaseLabel.textContent = state.phase === "setup" ? "Setup" : state.phase[0].toUpperCase() + state.phase.slice(1);
 
@@ -1748,6 +1884,7 @@ function render() {
 
   if (state.phase === "support") renderSupport();
   if (state.phase === "resolution") renderResolution();
+  renderPhaseGuide();
 
   const resolutionComplete = state.phase === "resolution" && state.resolution.length >= state.storylines.length;
   els.nextRoundBtn.disabled = state.phase === "resolution" && !resolutionComplete;
@@ -1764,6 +1901,17 @@ function render() {
   saveGame();
 }
 
+function toggleBeginnerMode() {
+  state.beginnerMode = Boolean(els.beginnerModeToggle?.checked);
+  if (state.phase === "setup") {
+    renderSetupWizard();
+  } else {
+    render();
+  }
+  saveGame();
+}
+
+if (els.beginnerModeToggle) els.beginnerModeToggle.addEventListener("change", toggleBeginnerMode);
 els.buildPlayersBtn.addEventListener("click", beginSetup);
 els.startGameBtn.addEventListener("click", startGame);
 els.toSupportBtn.addEventListener("click", beginSupport);

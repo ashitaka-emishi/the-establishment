@@ -24,6 +24,7 @@ Then open <http://localhost:4173/webgame/>.
 - Four-round storyline flow.
 - Snake-order influencer placement.
 - Guided resolution scoring, XP awards, and round transitions.
+- Optional beginner-mode phase reminders.
 - Local save and resume.
 
 See <a href="https://github.com/ashitaka-emishi/the-establishment/blob/master/webgame/README.md"><code>webgame/README.md</code></a> for implementation details and current limitations.

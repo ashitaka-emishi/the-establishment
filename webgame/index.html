@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Public+Sans:wght@400;500;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=mobile-layouts-1" />
+  <link rel="stylesheet" href="./styles.css?v=beginner-prompts-1" />
 </head>
 <body>
   <div class="ambient"></div>
@@ -17,9 +17,17 @@
   </header>
 
   <main id="app">
+    <div class="mode-bar">
+      <label class="mode-toggle">
+        <input id="beginnerModeToggle" type="checkbox" />
+        Beginner mode
+      </label>
+    </div>
+
     <section class="panel" id="setupPanel">
       <h2>Setup</h2>
       <div id="savePanel"></div>
+      <div id="setupGuide"></div>
       <div class="row" id="setupIntro">
         <label for="playerCount">Players</label>
         <input id="playerCount" type="number" min="2" max="6" value="3" />
@@ -45,6 +53,7 @@
         <button id="resetBtn">Reset</button>
       </div>
 
+      <div id="phaseGuide"></div>
       <div id="privacyPanel" class="privacy-panel"></div>
 
       <h3>Storylines</h3>
@@ -66,6 +75,6 @@
     </section>
   </main>
 
-  <script src="./app.js?v=mobile-layouts-1"></script>
+  <script src="./app.js?v=beginner-prompts-1"></script>
 </body>
 </html>
