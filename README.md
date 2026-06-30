@@ -39,7 +39,7 @@ The generated site is written to `_site/`.
 
 - Rulebook-aligned setup for 2-6 players
 - Faction selection with faction-specific influencer decks
-- Description card selection
+- Generated description-card image selection
 - Four-round storyline flow
 - Snake-order influencer placement
 - Society restrictions, scoring, and XP tracking
@@ -54,6 +54,7 @@ for repeatable complete-game validation.
 
 - `site/` - Quarto website shell and navigation
 - `webgame/` - playable browser application
+- `scripts/` - deterministic asset generation helpers
 - `__docs__/` - rulebook, storybook, and card assets
 - `docs/` - product roadmap, playtest checklist, and future multiplayer planning
 

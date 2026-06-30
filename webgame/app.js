@@ -141,6 +141,7 @@ function pad(n) { return String(n).padStart(3, "0"); }
 function storylineSrc(num, side) { return `../__docs__/cards/storyline/storyline-${pad(num - 1)}_${side}.png`; }
 function influencerSrc(id) { return `../__docs__/cards/influencer/influencer-${pad(id)}_F.png`; }
 function influencerBackSrc() { return "../__docs__/cards/influencer/influencer-004_B.png"; }
+function descriptionSrc(id) { return `../__docs__/cards/description/description-${pad(id)}_F.png`; }
 function factionIdentitySrc(faction) { return `../__docs__/cards/faction/faction-${pad(faction.cardId)}_B.png`; }
 function factionReferenceSrc(faction) { return `../__docs__/cards/faction/faction-${pad(faction.cardId)}_F.png`; }
 function societySrc(id) { return `../__docs__/cards/society/society-${pad(id)}_F.png`; }
@@ -538,9 +539,19 @@ function confirmFaction(factionId, name) {
 
 function descriptionCardMarkup(card, selected) {
   return `
-    <button class="description-card ${selected ? "selected" : ""}" data-description-id="${card.id}" type="button">
-      ${esc(card.name)}
+    <button class="description-card ${selected ? "selected" : ""}" data-description-id="${card.id}" type="button" aria-label="${esc(card.name)} description card">
+      <img src="${descriptionSrc(card.id)}" alt="" aria-hidden="true" loading="lazy" />
+      <span class="sr-only">${esc(card.name)}</span>
     </button>
+  `;
+}
+
+function lockedDescriptionMarkup(card) {
+  return `
+    <div class="description-card locked" role="img" aria-label="${esc(card.name)} description card">
+      <img src="${descriptionSrc(card.id)}" alt="" aria-hidden="true" loading="lazy" />
+      <span class="sr-only">${esc(card.name)}</span>
+    </div>
   `;
 }
 
@@ -654,7 +665,7 @@ function renderPrivacyPanel() {
           <div>
             <h4>Description cards</h4>
             <div class="private-descriptions">
-              ${unlocked.descriptions.map((card) => `<div class="description-card locked">${esc(card.name)}</div>`).join("")}
+              ${unlocked.descriptions.map(lockedDescriptionMarkup).join("")}
             </div>
           </div>
           <div>
@@ -694,7 +705,7 @@ function renderCardSetup() {
       </div>
       <div class="player-area-layout">
         <div class="chosen-descriptions">
-          ${selected.length ? selected.map((card) => `<div class="description-card locked">${esc(card.name)}</div>`).join("") : "<div class=\"empty-slot\">Select 3 descriptions</div>"}
+          ${selected.length ? selected.map(lockedDescriptionMarkup).join("") : "<div class=\"empty-slot\">Select 3 descriptions</div>"}
         </div>
         <div class="faction-zone">
           <img class="faction-card-img" src="${factionIdentitySrc(faction)}" alt="${esc(faction.name)}" />

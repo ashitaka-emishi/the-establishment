@@ -25,8 +25,8 @@ tested quickly.
 - Save and resume are required.
 - Mobile and tablet layouts are first-class, not follow-up polish.
 - Beginner mode should optionally show rule prompts at each phase.
-- Missing description cards should be created in a style consistent with the
-  existing cards, including matching typography, colors, borders, and filigree.
+- Description cards should remain visually consistent with the existing cards,
+  including matching typography, colors, borders, and filigree.
 - The repository should keep roadmap and planning files tracked.
 
 ## Milestones
