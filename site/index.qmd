@@ -10,7 +10,10 @@ title-block-style: none
 
 Run a four-round local game without paper scorekeeping. The web referee handles setup, faction decks, storyline flow, support placement, guided resolution, XP, and save/resume.
 
+This project is in honor of *The Establishment* creator Manda Shafer. Visit the [official game site](https://www.theestablishmentgame.com/) to learn more.
+
 [Play the web game](webgame/){.btn .btn-primary .btn-lg}
+[Official game site](https://www.theestablishmentgame.com/){.btn .btn-outline-light .btn-lg}
 [Read the roadmap](roadmap.html){.btn .btn-outline-light .btn-lg}
 :::
 

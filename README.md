@@ -1,7 +1,11 @@
 # The Establishment
 
+This project is in honor of *The Establishment* creator Manda Shafer.
+
 A browser-based local multiplayer implementation of *The Establishment*, using
 the rulebook and card assets included in this repository.
+
+**[Visit the official game site](https://www.theestablishmentgame.com/)**
 
 **[Open the live site and game demo →](https://ashitaka-emishi.github.io/the-establishment/)**
 
