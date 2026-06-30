@@ -16,6 +16,7 @@ The first production target is a polished local referee that can run a full game
 
 Online multiplayer and Discord Activity support are later-phase work after rule fidelity, card data, scoring, and table UX stabilize.
 
+<a class="btn btn-secondary" href="https://github.com/ashitaka-emishi/the-establishment/blob/master/docs/MULTIPLAYER_DISCORD_SPIKE.md">Read the multiplayer spike</a>
 <a class="btn btn-secondary" href="https://github.com/ashitaka-emishi/the-establishment/blob/master/docs/MULTIPLAYER_PLAN.md">Read the multiplayer plan</a>
 
 ## Milestone Sequence
